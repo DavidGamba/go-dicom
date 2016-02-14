@@ -29,7 +29,8 @@ type dicomqr struct {
 	Host      string
 	Port      int
 	Conn      net.Conn
-	ar        associationRequest
+	ar        aAssociateRequest
+	rr        aReleaseRequest
 }
 
 func (qr *dicomqr) Dial() error {
@@ -44,7 +45,14 @@ func (qr *dicomqr) Dial() error {
 	return nil
 }
 
-type associationRequest struct {
+type aReleaseRequest struct {
+	PDUType   uint8
+	blank     [1]byte
+	PDULenght uint32
+	request   [4]byte
+}
+
+type aAssociateRequest struct {
 	PDUType         uint8
 	blank           [1]byte
 	PDULenght       uint32
@@ -57,12 +65,17 @@ type associationRequest struct {
 }
 
 func (qr *dicomqr) Init() {
-	qr.ar = associationRequest{
+	qr.ar = aAssociateRequest{
 		PDUType:         1,
 		ProtocolVersion: 1,
 		CalledAE:        qr.CalledAE,
 		CallingAE:       qr.CallingAE,
 		Content:         []byte{},
+	}
+
+	qr.rr = aReleaseRequest{
+		PDUType:   5,
+		PDULenght: 4,
 	}
 }
 
@@ -88,6 +101,19 @@ func (qr *dicomqr) AR() (int, error) {
 	b = append(b, qr.ar.CallingAE[:]...)
 	b = append(b, qr.ar.blank3[:]...)
 	b = append(b, qr.ar.Content...)
+	printBytes(b)
+	i, err := qr.Conn.Write(b)
+	return i, err
+}
+
+func (qr *dicomqr) RR() (int, error) {
+	b := []byte{}
+	b = append(b, qr.rr.PDUType)
+	b = append(b, qr.rr.blank[:]...)
+	b4 := make([]byte, 4)
+	binary.BigEndian.PutUint32(b4, qr.rr.PDULenght)
+	b = append(b, b4[:]...)
+	b = append(b, qr.rr.request[:]...)
 	printBytes(b)
 	i, err := qr.Conn.Write(b)
 	return i, err
@@ -367,10 +393,31 @@ func main() {
 	case 0x2:
 		fmt.Println("A-ASSOCIATE accept")
 		qr.HandleAccept()
-		os.Exit(0)
 	default:
 		printBytes(tbuf)
 		fmt.Println("Unknown")
+		log.Fatal(err)
+	}
+
+	i, err = qr.RR()
+	if err != nil {
+		fmt.Println("binary.Write failed:", err)
+	}
+	log.Printf("Payload sent: %d bytes", i)
+
+	tbuf = make([]byte, 1)
+	_, err = qr.Conn.Read(tbuf)
+	if err != nil {
+		log.Fatal("Error reading", err)
+	}
+	switch tbuf[0] {
+	case 0x6:
+		fmt.Println("A-RELEASE response")
+		qr.Conn.Close()
+	default:
+		printBytes(tbuf)
+		fmt.Println("Unknown")
+		log.Fatal(err)
 	}
 
 	qr.Conn.Close()

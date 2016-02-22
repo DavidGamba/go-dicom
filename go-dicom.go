@@ -14,7 +14,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"github.com/davidgamba/go-dicom/sopclass"
-	"github.com/davidgamba/go-dicom/transfersyntax"
+	"github.com/davidgamba/go-dicom/syntax/ts"
 	"github.com/davidgamba/go-getoptions" // As getoptions
 	"log"
 	"net"
@@ -164,8 +164,8 @@ func AbstractSyntaxItem() []byte {
 }
 
 // TrasnferSyntaxItem returns a byte slice with transfer syntax item.
-func TrasnferSyntaxItem(ts string) []byte {
-	return stringItem([]byte{0x40}, ts, "TrasnferSyntaxItem")
+func TrasnferSyntaxItem(tsi string) []byte {
+	return stringItem([]byte{0x40}, tsi, "TrasnferSyntaxItem")
 }
 
 func stringItem(t []byte, content, name string) []byte {
@@ -362,9 +362,9 @@ func main() {
 
 	qr.ARAdd(PressContextItem(
 		AbstractSyntaxItem(),
-		TrasnferSyntaxItem(transfersyntax.ImplicitVRLittleEndian),
-		TrasnferSyntaxItem(transfersyntax.ExplicitVRLittleEndian),
-		TrasnferSyntaxItem(transfersyntax.ExplicitVRBigEndian),
+		TrasnferSyntaxItem(ts.ImplicitVRLittleEndian),
+		TrasnferSyntaxItem(ts.ExplicitVRLittleEndian),
+		TrasnferSyntaxItem(ts.ExplicitVRBigEndian),
 	))
 	qr.ARAdd(UserInfoItem(
 		MaximunLenghtItem(32768),

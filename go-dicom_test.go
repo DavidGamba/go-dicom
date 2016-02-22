@@ -9,7 +9,7 @@
 package main
 
 import (
-	"github.com/davidgamba/go-dicom/transfersyntax"
+	"github.com/davidgamba/go-dicom/syntax/ts"
 	"reflect"
 	"testing"
 )
@@ -25,7 +25,7 @@ func TestIntToBytes(t *testing.T) {
 	}
 }
 func TestTS(t *testing.T) {
-	b := TrasnferSyntaxItem(transfersyntax.ImplicitVRLittleEndian)
+	b := TrasnferSyntaxItem(ts.ImplicitVRLittleEndian)
 	ts := []byte{0x40, 0, 0, 0x11, 0x31, 0x2e, 0x32, 0x2e, 0x38, 0x34, 0x30, 0x2e, 0x31, 0x30, 0x30, 0x30, 0x38, 0x2e, 0x31, 0x2e, 0x32}
 	if !reflect.DeepEqual(b, ts) {
 		t.Errorf("Fail: %x", b)

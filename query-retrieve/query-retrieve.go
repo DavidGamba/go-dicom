@@ -10,7 +10,8 @@ import (
 	"gopkg.in/xmlpath.v2"
 	"os"
 	"os/exec"
-	// "sort"
+	"sort"
+	"strconv"
 	"strings"
 )
 
@@ -43,6 +44,54 @@ type instanceLevel struct {
 	SOPInstanceUID string //	(0000,0000)
 	Modality       string //	(0000,0000)
 	InstanceNumber string //	(0000,0000)
+}
+
+type byPatientName []patientLevel
+
+func (a byPatientName) Len() int           { return len(a) }
+func (a byPatientName) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a byPatientName) Less(i, j int) bool { return a[i].PatientName < a[j].PatientName }
+
+type byStudyInstanceUID []studyLevel
+
+func (a byStudyInstanceUID) Len() int           { return len(a) }
+func (a byStudyInstanceUID) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a byStudyInstanceUID) Less(i, j int) bool { return a[i].StudyInstanceUID < a[j].StudyInstanceUID }
+
+type bySeriesNumber []seriesLevel
+
+func (a bySeriesNumber) Len() int      { return len(a) }
+func (a bySeriesNumber) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
+func (a bySeriesNumber) Less(i, j int) bool {
+	in, err := strconv.Atoi(a[i].SeriesNumber)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "[ERROR] SeriesNumber is not numeral: %s", a[i].SeriesNumber)
+		return false
+	}
+	jn, err := strconv.Atoi(a[j].SeriesNumber)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "[ERROR] SeriesNumber is not numeral: %s", a[j].SeriesNumber)
+		return false
+	}
+	return in < jn
+}
+
+type byInstanceNumber []instanceLevel
+
+func (a byInstanceNumber) Len() int      { return len(a) }
+func (a byInstanceNumber) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
+func (a byInstanceNumber) Less(i, j int) bool {
+	in, err := strconv.Atoi(a[i].InstanceNumber)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "[ERROR] InstanceNumber is not numeral: %s", a[i].InstanceNumber)
+		return false
+	}
+	jn, err := strconv.Atoi(a[j].InstanceNumber)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "[ERROR] InstanceNumber is not numeral: %s", a[j].InstanceNumber)
+		return false
+	}
+	return in < jn
 }
 
 func debugf(format string, a ...interface{}) (n int, err error) {
@@ -106,6 +155,7 @@ func patientFind(bin, pacs, bind, dir, patient string) ([]patientLevel, error) {
 		pl = append(pl, patientLevel{PatientName: pn, PatientID: pID, NumberOfRelatedStudies: pNS, NumberOfRelatedSeries: pNSer, NumberOfRelatedInstances: pNIns})
 		debugf("%v\n", pl)
 	}
+	sort.Stable(byPatientName(pl))
 	return pl, nil
 }
 
@@ -159,6 +209,7 @@ func studyList(bin, pacs, bind, dir, patient string) ([]studyLevel, error) {
 				NumberOfRelatedInstances: sNIns})
 		debugf("%v\n", sl)
 	}
+	sort.Stable(byStudyInstanceUID(sl))
 	return sl, nil
 }
 
@@ -209,6 +260,7 @@ func seriesList(bin, pacs, bind, dir, patient, studyUID string) ([]seriesLevel, 
 				NumberOfRelatedInstances: sNIns})
 		debugf("%v\n", sl)
 	}
+	sort.Stable(bySeriesNumber(sl))
 	return sl, nil
 }
 
@@ -253,6 +305,7 @@ func sopList(bin, pacs, bind, dir, patient, studyUID, seriesUID string) ([]insta
 		sl = append(sl, instanceLevel{SOPInstanceUID: sop, Modality: modality, InstanceNumber: number})
 		debugf("%v\n", sl)
 	}
+	sort.Stable(byInstanceNumber(sl))
 	return sl, nil
 }
 
@@ -316,8 +369,6 @@ func printPatientSOPList(bin, pacs, bind, dir, patient string, level int, get bo
 	if err != nil {
 		return err
 	}
-	// TODO: sort results
-	// sort.Strings(pl)
 	for _, p := range pl {
 		fmt.Printf("{ PatientName: %s,\n", p.PatientName)
 		fmt.Printf("  PatientID: %s,\n", p.PatientID)
@@ -330,8 +381,6 @@ func printPatientSOPList(bin, pacs, bind, dir, patient string, level int, get bo
 			if err != nil {
 				return err
 			}
-			// TODO: sort results
-			// sort.Strings(sl)
 			for _, s := range sl {
 				fmt.Printf("    { StudyInstanceUID: %s,\n", s.StudyInstanceUID)
 				fmt.Printf("      AccessionNumber: %s,\n", s.AccessionNumber)
@@ -344,8 +393,6 @@ func printPatientSOPList(bin, pacs, bind, dir, patient string, level int, get bo
 					if err != nil {
 						return err
 					}
-					// TODO: sort results
-					// sort.Strings(sel)
 					for _, se := range sel {
 						fmt.Printf("        { SeriesInstanceUID: %s,\n", se.SeriesInstanceUID)
 						fmt.Printf("          SeriesNumber: %s,\n", se.SeriesNumber)
@@ -360,7 +407,6 @@ func printPatientSOPList(bin, pacs, bind, dir, patient string, level int, get bo
 							if err != nil {
 								return err
 							}
-							// TODO: Sort sopl
 							for _, sop := range sopl {
 								fmt.Printf("            { Modality: %s, SOPInstanceUID: %s,  InstanceNumber: %s}\n", sop.Modality, sop.SOPInstanceUID, sop.InstanceNumber)
 							}

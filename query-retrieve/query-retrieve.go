@@ -127,7 +127,7 @@ func patientFind(bin, pacs, bind, dir, patient string) ([]patientLevel, error) {
 	debugln(command)
 	out, err := exec.Command(command[0], command[1:]...).Output()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "[ERROR] %s\n", err)
+		fmt.Fprintf(os.Stderr, "[ERROR] command: %s\n", err)
 		return pl, err
 	}
 	debugf("%s\n", out)
@@ -176,7 +176,7 @@ func studyList(bin, pacs, bind, dir, patient string) ([]studyLevel, error) {
 	debugln(command)
 	out, err := exec.Command(command[0], command[1:]...).Output()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "[ERROR] %s\n", err)
+		fmt.Fprintf(os.Stderr, "[ERROR] command: %s\n", err)
 		return sl, err
 	}
 	debugf("%s\n", out)
@@ -230,7 +230,7 @@ func seriesList(bin, pacs, bind, dir, patient, studyUID string) ([]seriesLevel, 
 	debugln(command)
 	out, err := exec.Command(command[0], command[1:]...).Output()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "[ERROR] %s\n", err)
+		fmt.Fprintf(os.Stderr, "[ERROR] command: %s\n", err)
 		return sl, err
 	}
 	debugf("%s\n", out)
@@ -281,7 +281,7 @@ func sopList(bin, pacs, bind, dir, patient, studyUID, seriesUID string) ([]insta
 	debugln(command)
 	out, err := exec.Command(command[0], command[1:]...).Output()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "[ERROR] %s\n", err)
+		fmt.Fprintf(os.Stderr, "[ERROR] command: %s\n", err)
 		return sl, err
 	}
 	debugf("%s\n", out)
@@ -459,7 +459,7 @@ func main() {
 	opt.IntVar(&level, "level", 3)
 	remaining, err := opt.Parse(os.Args[1:])
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "[ERROR] %s\n", err)
+		fmt.Fprintf(os.Stderr, "[ERROR] getoptions: %s\n", err)
 		os.Exit(1)
 	}
 
@@ -490,13 +490,13 @@ func main() {
 	case "list-all":
 		pl, err := patientList(lib, pacs, bind, dir)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "[ERROR] %s\n", err)
+			fmt.Fprintf(os.Stderr, "[ERROR] patientList: %s\n", err)
 			os.Exit(1)
 		}
 		for _, p := range pl {
 			err := printPatientSOPList(lib, pacs, bind, dir, p.PatientName, level, false)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "[ERROR] %s\n", err)
+				fmt.Fprintf(os.Stderr, "[ERROR] printPatientSOPList: %s\n", err)
 				os.Exit(1)
 			}
 		}
@@ -509,7 +509,7 @@ func main() {
 		patient := remaining[1]
 		err := printPatientSOPList(lib, pacs, bind, dir, patient, level, false)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "[ERROR] %s\n", err)
+			fmt.Fprintf(os.Stderr, "[ERROR] printPatientSOPList: %s\n", err)
 			os.Exit(1)
 		}
 	case "get-patient":
@@ -521,7 +521,7 @@ func main() {
 		patient := remaining[1]
 		err := printPatientSOPList(lib, pacs, bind, dir, patient, 2, true)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "[ERROR] %s\n", err)
+			fmt.Fprintf(os.Stderr, "[ERROR] printPatientSOPList: %s\n", err)
 			os.Exit(1)
 		}
 	}

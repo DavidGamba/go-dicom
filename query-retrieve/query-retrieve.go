@@ -16,6 +16,7 @@ import (
 )
 
 var debug bool
+var hideInstances bool
 
 type patientLevel struct {
 	PatientName              string // 	(0010,0010)
@@ -407,8 +408,10 @@ func printPatientSOPList(bin, pacs, bind, dir, patient string, level int, get bo
 							if err != nil {
 								return err
 							}
-							for _, sop := range sopl {
-								fmt.Printf("            { Modality: %s, SOPInstanceUID: %s,  InstanceNumber: %s}\n", sop.Modality, sop.SOPInstanceUID, sop.InstanceNumber)
+							if !hideInstances {
+								for _, sop := range sopl {
+									fmt.Printf("            { Modality: %s, SOPInstanceUID: %s,  InstanceNumber: %s}\n", sop.Modality, sop.SOPInstanceUID, sop.InstanceNumber)
+								}
 							}
 							fmt.Printf("          ],\n")
 							fmt.Printf("          instanceCount: %d,\n", len(sopl))
@@ -432,7 +435,7 @@ func synopsis() {
 	synopsis := `query-retrieve <action> [<patient>]
   --lib <dcm4chee-location> -c|--connect <ae@host:port>
   [--bind <callingAE>]
-  [--level <1 study, 2 series, 3 image>]
+  [--level <1 study, 2 series, 3 image>] [--hide-instances]
   [--dir <tmp-dir-location>]
   [--debug]
 
@@ -452,6 +455,7 @@ func main() {
 	opt := getoptions.GetOptions()
 	opt.BoolVar(&help, "help", false)
 	opt.BoolVar(&debug, "debug", false)
+	opt.BoolVar(&hideInstances, "hide-instances", false)
 	opt.StringVar(&pacs, "connect", "DCM4CHEE@localhost:11112")
 	opt.StringVar(&lib, "lib", "")
 	opt.StringVar(&bind, "bind", "go-dicom")

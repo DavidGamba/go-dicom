@@ -24,6 +24,7 @@ type patientLevel struct {
 	NumberOfRelatedStudies   string //	(0020,1200)
 	NumberOfRelatedSeries    string //	(0020,1202)
 	NumberOfRelatedInstances string //	(0020,1204)
+	ReferringPhysicianName   string //  (0008,0090)
 }
 
 type studyLevel struct {
@@ -123,6 +124,7 @@ func patientFind(bin, pacs, bind, dir, patient string) ([]patientLevel, error) {
 	command = append(command, "-r", "00201200") // NumberOfPatientRelatedStudies
 	command = append(command, "-r", "00201202") // NumberOfPatientRelatedSeries
 	command = append(command, "-r", "00201204") // NumberOfPatientRelatedInstances
+	command = append(command, "-r", "00080090") // ReferringPhysicianName
 	command = append(command, "-L", "PATIENT")
 	command = append(command, "-X", "--out-dir", dir, "--out-cat")
 	debugln(command)
@@ -146,14 +148,23 @@ func patientFind(bin, pacs, bind, dir, patient string) ([]patientLevel, error) {
 	pNSPath := xmlpath.MustCompile("DicomAttribute[@keyword='NumberOfPatientRelatedStudies']/Value")
 	pNSerPath := xmlpath.MustCompile("DicomAttribute[@keyword='NumberOfPatientRelatedSeries']/Value")
 	pNInsPath := xmlpath.MustCompile("DicomAttribute[@keyword='NumberOfPatientRelatedInstances']/Value")
+	rnPath := xmlpath.MustCompile("DicomAttribute[@keyword='ReferringPhysicianName']/PersonName[@number='1']/Alphabetic/FamilyName")
 	iter := path.Iter(root)
 	for iter.Next() {
 		pn, _ := pnPath.String(iter.Node())
+		rn, _ := rnPath.String(iter.Node())
 		pID, _ := pIDPath.String(iter.Node())
 		pNS, _ := pNSPath.String(iter.Node())
 		pNSer, _ := pNSerPath.String(iter.Node())
 		pNIns, _ := pNInsPath.String(iter.Node())
-		pl = append(pl, patientLevel{PatientName: pn, PatientID: pID, NumberOfRelatedStudies: pNS, NumberOfRelatedSeries: pNSer, NumberOfRelatedInstances: pNIns})
+		pl = append(pl, patientLevel{
+			PatientName:              pn,
+			PatientID:                pID,
+			NumberOfRelatedStudies:   pNS,
+			NumberOfRelatedSeries:    pNSer,
+			NumberOfRelatedInstances: pNIns,
+			ReferringPhysicianName:   rn,
+		})
 		debugf("%v\n", pl)
 	}
 	sort.Stable(byPatientName(pl))
@@ -376,6 +387,7 @@ func printPatientSOPList(bin, pacs, bind, dir, patient string, level int, get bo
 		fmt.Printf("  NumberOfPatientRelatedStudies: %s,\n", p.NumberOfRelatedStudies)
 		fmt.Printf("  NumberOfPatientRelatedSeries: %s,\n", p.NumberOfRelatedSeries)
 		fmt.Printf("  NumberOfPatientRelatedInstances: %s,\n", p.NumberOfRelatedInstances)
+		fmt.Printf("  ReferringPhysicianName: %s,\n", p.ReferringPhysicianName)
 		if level >= 1 { // study
 			fmt.Printf("  studies: [\n")
 			sl, err := studyList(bin, pacs, bind, dir, patient)

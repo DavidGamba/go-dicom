@@ -136,13 +136,15 @@ func patientLevelFind(bin, pacs, bind, dir string, query ...string) ([]tag.Patie
 	return pl, nil
 }
 
-func studyList(bin, pacs, bind, dir, patient string) ([]tag.StudyLevel, error) {
+func studyLevelFind(bin, pacs, bind, dir string, query ...string) ([]tag.StudyLevel, error) {
 	var sl []tag.StudyLevel
 	command := []string{}
 	command = append(command, bin+string(os.PathSeparator)+"bin"+string(os.PathSeparator)+"findscu")
 	command = append(command, "-c", pacs)
 	command = append(command, "-b", bind)
-	command = append(command, "-m", "PatientName="+patient)
+	for _, q := range query {
+		command = append(command, "-m", q)
+	}
 	command = append(command, "-r", "StudyInstanceUID")
 	command = append(command, "-r", "00080050") // AccessionNumber
 	command = append(command, "-r", "00080061") // ModalitiesInStudy
@@ -357,59 +359,65 @@ func printPatientSOPList(bin, pacs, bind, dir string, level int, get bool, query
 		fmt.Printf("  NumberOfPatientRelatedSeries: %s,\n", p.NumberOfRelatedSeries)
 		fmt.Printf("  NumberOfPatientRelatedInstances: %s,\n", p.NumberOfRelatedInstances)
 		if level >= 1 { // study
-			fmt.Printf("  studies: [\n")
-			sl, err := studyList(bin, pacs, bind, dir, p.PatientName)
-			if err != nil {
-				return err
-			}
-			for _, s := range sl {
-				fmt.Printf("    { StudyInstanceUID: %s,\n", s.StudyInstanceUID)
-				fmt.Printf("      AccessionNumber: %s,\n", s.AccessionNumber)
-				fmt.Printf("      ModalitiesInStudy: %s,\n", s.ModalitiesInStudy)
-				fmt.Printf("      NumberOfRelatedSeries: %s,\n", s.NumberOfRelatedSeries)
-				fmt.Printf("      NumberOfRelatedInstances: %s,\n", s.NumberOfRelatedInstances)
-				fmt.Printf("      ReferringPhysicianName: %s,\n", s.ReferringPhysicianName)
-				if level >= 2 { //  series
-					fmt.Printf("      series: [\n")
-					sel, err := seriesList(bin, pacs, bind, dir, p.PatientName, s.StudyInstanceUID)
-					if err != nil {
-						return err
-					}
-					for _, se := range sel {
-						fmt.Printf("        { SeriesInstanceUID: %s,\n", se.SeriesInstanceUID)
-						fmt.Printf("          SeriesNumber: %s,\n", se.SeriesNumber)
-						fmt.Printf("          Modality: %s,\n", se.Modality)
-						fmt.Printf("          NumberOfRelatedInstances: %s,\n", se.NumberOfRelatedInstances)
-						if level == 2 && get {
-							getSeries(bin, pacs, dir, bind, p.PatientName, s.StudyInstanceUID, se.SeriesInstanceUID)
-						}
-						if level >= 3 { //  image
-							fmt.Printf("          instances: [\n")
-							sopl, err := sopList(bin, pacs, bind, dir, p.PatientName, s.StudyInstanceUID, se.SeriesInstanceUID)
-							if err != nil {
-								return err
-							}
-							if !hideInstances {
-								for _, sop := range sopl {
-									fmt.Printf("            { Modality: %s, SOPInstanceUID: %s,  InstanceNumber: %s}\n", sop.Modality, sop.SOPInstanceUID, sop.InstanceNumber)
-								}
-							}
-							fmt.Printf("          ],\n")
-							fmt.Printf("          instanceCount: %d,\n", len(sopl))
-						}
-						fmt.Printf("        },\n")
-					}
-					fmt.Printf("      ],\n")
-					fmt.Printf("      seriesCount: %d,\n", len(sel))
-				}
-				fmt.Printf("    },\n")
-			}
-			fmt.Printf("  ],\n")
-			fmt.Printf("  studyCount: %d,\n", len(sl))
+			printStudySOPList(bin, pacs, bind, dir, level, get, p, "PatientName="+p.PatientName)
 		}
 		fmt.Printf("}\n")
 	}
 	fmt.Printf("patientCount: %d\n", len(pl))
+	return nil
+}
+
+func printStudySOPList(bin, pacs, bind, dir string, level int, get bool, patient tag.PatientLevel, query ...string) error {
+	fmt.Printf("  studies: [\n")
+	sl, err := studyLevelFind(bin, pacs, bind, dir, query...)
+	if err != nil {
+		return err
+	}
+	for _, s := range sl {
+		s.PatientLevel = patient
+		fmt.Printf("    { StudyInstanceUID: %s,\n", s.StudyInstanceUID)
+		fmt.Printf("      AccessionNumber: %s,\n", s.AccessionNumber)
+		fmt.Printf("      ModalitiesInStudy: %s,\n", s.ModalitiesInStudy)
+		fmt.Printf("      NumberOfRelatedSeries: %s,\n", s.NumberOfRelatedSeries)
+		fmt.Printf("      NumberOfRelatedInstances: %s,\n", s.NumberOfRelatedInstances)
+		fmt.Printf("      ReferringPhysicianName: %s,\n", s.ReferringPhysicianName)
+		if level >= 2 { //  series
+			fmt.Printf("      series: [\n")
+			sel, err := seriesList(bin, pacs, bind, dir, s.PatientLevel.PatientName, s.StudyInstanceUID)
+			if err != nil {
+				return err
+			}
+			for _, se := range sel {
+				fmt.Printf("        { SeriesInstanceUID: %s,\n", se.SeriesInstanceUID)
+				fmt.Printf("          SeriesNumber: %s,\n", se.SeriesNumber)
+				fmt.Printf("          Modality: %s,\n", se.Modality)
+				fmt.Printf("          NumberOfRelatedInstances: %s,\n", se.NumberOfRelatedInstances)
+				if level == 2 && get {
+					getSeries(bin, pacs, dir, bind, s.PatientLevel.PatientName, s.StudyInstanceUID, se.SeriesInstanceUID)
+				}
+				if level >= 3 { //  image
+					fmt.Printf("          instances: [\n")
+					sopl, err := sopList(bin, pacs, bind, dir, s.PatientLevel.PatientName, s.StudyInstanceUID, se.SeriesInstanceUID)
+					if err != nil {
+						return err
+					}
+					if !hideInstances {
+						for _, sop := range sopl {
+							fmt.Printf("            { Modality: %s, SOPInstanceUID: %s,  InstanceNumber: %s}\n", sop.Modality, sop.SOPInstanceUID, sop.InstanceNumber)
+						}
+					}
+					fmt.Printf("          ],\n")
+					fmt.Printf("          instanceCount: %d,\n", len(sopl))
+				}
+				fmt.Printf("        },\n")
+			}
+			fmt.Printf("      ],\n")
+			fmt.Printf("      seriesCount: %d,\n", len(sel))
+		}
+		fmt.Printf("    },\n")
+	}
+	fmt.Printf("  ],\n")
+	fmt.Printf("  studyCount: %d,\n", len(sl))
 	return nil
 }
 

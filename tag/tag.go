@@ -29,6 +29,7 @@ type StudyLevel struct {
 	StudyDescription         string //	(0008,1030)
 	NumberOfRelatedSeries    string //	(0020,1206)
 	NumberOfRelatedInstances string //	(0020,1208)
+	PatientLevel             PatientLevel
 }
 
 // SeriesLevel has series level DICOM tags

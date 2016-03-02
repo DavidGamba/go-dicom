@@ -80,11 +80,7 @@ func debugln(a ...interface{}) (n int, err error) {
 	return 0, nil
 }
 
-func patientList(bin, pacs, bind, dir string) ([]tag.PatientLevel, error) {
-	return patientFind(bin, pacs, bind, dir, "PatientName=*")
-}
-
-func patientFind(bin, pacs, bind, dir string, query ...string) ([]tag.PatientLevel, error) {
+func patientLevelFind(bin, pacs, bind, dir string, query ...string) ([]tag.PatientLevel, error) {
 	var pl []tag.PatientLevel
 	command := []string{}
 	command = append(command, bin+string(os.PathSeparator)+"bin"+string(os.PathSeparator)+"findscu")
@@ -97,7 +93,6 @@ func patientFind(bin, pacs, bind, dir string, query ...string) ([]tag.PatientLev
 	command = append(command, "-r", "00201200") // NumberOfPatientRelatedStudies
 	command = append(command, "-r", "00201202") // NumberOfPatientRelatedSeries
 	command = append(command, "-r", "00201204") // NumberOfPatientRelatedInstances
-	command = append(command, "-r", "00080090") // ReferringPhysicianName
 	command = append(command, "-L", "PATIENT")
 	command = append(command, "-X", "--out-dir", dir, "--out-cat")
 	debugln(command)
@@ -121,11 +116,9 @@ func patientFind(bin, pacs, bind, dir string, query ...string) ([]tag.PatientLev
 	pNSPath := xmlpath.MustCompile("DicomAttribute[@keyword='NumberOfPatientRelatedStudies']/Value")
 	pNSerPath := xmlpath.MustCompile("DicomAttribute[@keyword='NumberOfPatientRelatedSeries']/Value")
 	pNInsPath := xmlpath.MustCompile("DicomAttribute[@keyword='NumberOfPatientRelatedInstances']/Value")
-	rnPath := xmlpath.MustCompile("DicomAttribute[@keyword='ReferringPhysicianName']/PersonName[@number='1']/Alphabetic/FamilyName")
 	iter := path.Iter(root)
 	for iter.Next() {
 		pn, _ := pnPath.String(iter.Node())
-		rn, _ := rnPath.String(iter.Node())
 		pID, _ := pIDPath.String(iter.Node())
 		pNS, _ := pNSPath.String(iter.Node())
 		pNSer, _ := pNSerPath.String(iter.Node())
@@ -136,7 +129,6 @@ func patientFind(bin, pacs, bind, dir string, query ...string) ([]tag.PatientLev
 			NumberOfRelatedStudies:   pNS,
 			NumberOfRelatedSeries:    pNSer,
 			NumberOfRelatedInstances: pNIns,
-			ReferringPhysicianName:   rn,
 		})
 		debugf("%v\n", pl)
 	}
@@ -156,6 +148,7 @@ func studyList(bin, pacs, bind, dir, patient string) ([]tag.StudyLevel, error) {
 	command = append(command, "-r", "00080061") // ModalitiesInStudy
 	command = append(command, "-r", "00201206") // NumberOfStudyRelatedSeries
 	command = append(command, "-r", "00201208") // NumberOfStudyRelatedInstances
+	command = append(command, "-r", "00080090") // ReferringPhysicianName
 	command = append(command, "-L", "STUDY")
 	command = append(command, "-X", "--out-dir", dir, "--out-cat")
 	debugln(command)
@@ -179,6 +172,7 @@ func studyList(bin, pacs, bind, dir, patient string) ([]tag.StudyLevel, error) {
 	smodPath := xmlpath.MustCompile("DicomAttribute[@keyword='ModalitiesInStudy']/Value")
 	sNSerPath := xmlpath.MustCompile("DicomAttribute[@keyword='NumberOfStudyRelatedSeries']/Value")
 	sNInsPath := xmlpath.MustCompile("DicomAttribute[@keyword='NumberOfStudyRelatedInstances']/Value")
+	rnPath := xmlpath.MustCompile("DicomAttribute[@keyword='ReferringPhysicianName']/PersonName[@number='1']/Alphabetic/FamilyName")
 	iter := path.Iter(root)
 	for iter.Next() {
 		suid, _ := suidPath.String(iter.Node())
@@ -186,10 +180,12 @@ func studyList(bin, pacs, bind, dir, patient string) ([]tag.StudyLevel, error) {
 		smod, _ := smodPath.String(iter.Node())
 		sNSer, _ := sNSerPath.String(iter.Node())
 		sNIns, _ := sNInsPath.String(iter.Node())
+		rn, _ := rnPath.String(iter.Node())
 		sl = append(sl,
 			tag.StudyLevel{StudyInstanceUID: suid,
 				AccessionNumber:          san,
 				ModalitiesInStudy:        smod,
+				ReferringPhysicianName:   rn,
 				NumberOfRelatedSeries:    sNSer,
 				NumberOfRelatedInstances: sNIns})
 		debugf("%v\n", sl)
@@ -350,7 +346,7 @@ func getInstance(bin, pacs, bind, dir, patient, studyUID, seriesUID, sopUID stri
 }
 
 func printPatientSOPList(bin, pacs, bind, dir string, level int, get bool, query ...string) error {
-	pl, err := patientFind(bin, pacs, bind, dir, query...)
+	pl, err := patientLevelFind(bin, pacs, bind, dir, query...)
 	if err != nil {
 		return err
 	}
@@ -360,7 +356,6 @@ func printPatientSOPList(bin, pacs, bind, dir string, level int, get bool, query
 		fmt.Printf("  NumberOfPatientRelatedStudies: %s,\n", p.NumberOfRelatedStudies)
 		fmt.Printf("  NumberOfPatientRelatedSeries: %s,\n", p.NumberOfRelatedSeries)
 		fmt.Printf("  NumberOfPatientRelatedInstances: %s,\n", p.NumberOfRelatedInstances)
-		fmt.Printf("  ReferringPhysicianName: %s,\n", p.ReferringPhysicianName)
 		if level >= 1 { // study
 			fmt.Printf("  studies: [\n")
 			sl, err := studyList(bin, pacs, bind, dir, p.PatientName)
@@ -373,6 +368,7 @@ func printPatientSOPList(bin, pacs, bind, dir string, level int, get bool, query
 				fmt.Printf("      ModalitiesInStudy: %s,\n", s.ModalitiesInStudy)
 				fmt.Printf("      NumberOfRelatedSeries: %s,\n", s.NumberOfRelatedSeries)
 				fmt.Printf("      NumberOfRelatedInstances: %s,\n", s.NumberOfRelatedInstances)
+				fmt.Printf("      ReferringPhysicianName: %s,\n", s.ReferringPhysicianName)
 				if level >= 2 { //  series
 					fmt.Printf("      series: [\n")
 					sel, err := seriesList(bin, pacs, bind, dir, p.PatientName, s.StudyInstanceUID)
@@ -479,7 +475,7 @@ func main() {
 
 	switch action {
 	case "list-all":
-		pl, err := patientList(lib, pacs, bind, dir)
+		pl, err := patientLevelFind(lib, pacs, bind, dir, "PatientName=*")
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "[ERROR] patientList: %s\n", err)
 			os.Exit(1)

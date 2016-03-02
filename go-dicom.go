@@ -13,6 +13,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"github.com/davidgamba/go-dicom/pdu"
 	"github.com/davidgamba/go-dicom/sopclass"
 	"github.com/davidgamba/go-dicom/syntax/ts"
 	"github.com/davidgamba/go-getoptions" // As getoptions
@@ -29,8 +30,8 @@ type dicomqr struct {
 	Host      string
 	Port      int
 	Conn      net.Conn
-	ar        aAssociateRequest
-	rr        aReleaseRequest
+	ar        pdu.AAssociateRequest
+	rr        pdu.AReleaseRequest
 }
 
 func (qr *dicomqr) Dial() error {
@@ -45,27 +46,8 @@ func (qr *dicomqr) Dial() error {
 	return nil
 }
 
-type aReleaseRequest struct {
-	PDUType   uint8
-	blank     [1]byte
-	PDULenght uint32
-	request   [4]byte
-}
-
-type aAssociateRequest struct {
-	PDUType         uint8
-	blank           [1]byte
-	PDULenght       uint32
-	ProtocolVersion uint16
-	blank2          [2]byte
-	CalledAE        [16]byte
-	CallingAE       [16]byte
-	blank3          [32]byte
-	Content         []byte
-}
-
 func (qr *dicomqr) Init() {
-	qr.ar = aAssociateRequest{
+	qr.ar = pdu.AAssociateRequest{
 		PDUType:         1,
 		ProtocolVersion: 1,
 		CalledAE:        qr.CalledAE,
@@ -73,7 +55,7 @@ func (qr *dicomqr) Init() {
 		Content:         []byte{},
 	}
 
-	qr.rr = aReleaseRequest{
+	qr.rr = pdu.AReleaseRequest{
 		PDUType:   5,
 		PDULenght: 4,
 	}
@@ -89,17 +71,17 @@ func (qr *dicomqr) AR() (int, error) {
 	b := []byte{}
 	// b := []byte{qr.ar.PDUType}
 	b = append(b, qr.ar.PDUType)
-	b = append(b, qr.ar.blank[:]...)
+	b = append(b, qr.ar.Blank[:]...)
 	b4 := make([]byte, 4)
 	binary.BigEndian.PutUint32(b4, qr.ar.PDULenght)
 	b = append(b, b4[:]...)
 	b2 := make([]byte, 2)
 	binary.BigEndian.PutUint16(b2, qr.ar.ProtocolVersion)
 	b = append(b, b2[:]...)
-	b = append(b, qr.ar.blank2[:]...)
+	b = append(b, qr.ar.Blank2[:]...)
 	b = append(b, qr.ar.CalledAE[:]...)
 	b = append(b, qr.ar.CallingAE[:]...)
-	b = append(b, qr.ar.blank3[:]...)
+	b = append(b, qr.ar.Blank3[:]...)
 	b = append(b, qr.ar.Content...)
 	printBytes(b)
 	i, err := qr.Conn.Write(b)
@@ -109,11 +91,11 @@ func (qr *dicomqr) AR() (int, error) {
 func (qr *dicomqr) RR() (int, error) {
 	b := []byte{}
 	b = append(b, qr.rr.PDUType)
-	b = append(b, qr.rr.blank[:]...)
+	b = append(b, qr.rr.Blank[:]...)
 	b4 := make([]byte, 4)
 	binary.BigEndian.PutUint32(b4, qr.rr.PDULenght)
 	b = append(b, b4[:]...)
-	b = append(b, qr.rr.request[:]...)
+	b = append(b, qr.rr.Request[:]...)
 	printBytes(b)
 	i, err := qr.Conn.Write(b)
 	return i, err

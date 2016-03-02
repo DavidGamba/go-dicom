@@ -81,16 +81,18 @@ func debugln(a ...interface{}) (n int, err error) {
 }
 
 func patientList(bin, pacs, bind, dir string) ([]tag.PatientLevel, error) {
-	return patientFind(bin, pacs, bind, dir, "*")
+	return patientFind(bin, pacs, bind, dir, "PatientName=*")
 }
 
-func patientFind(bin, pacs, bind, dir, patient string) ([]tag.PatientLevel, error) {
+func patientFind(bin, pacs, bind, dir string, query ...string) ([]tag.PatientLevel, error) {
 	var pl []tag.PatientLevel
 	command := []string{}
 	command = append(command, bin+string(os.PathSeparator)+"bin"+string(os.PathSeparator)+"findscu")
 	command = append(command, "-c", pacs)
 	command = append(command, "-b", bind)
-	command = append(command, "-m", "PatientName="+patient)
+	for _, q := range query {
+		command = append(command, "-m", q)
+	}
 	command = append(command, "-r", "00100020") // PatientID
 	command = append(command, "-r", "00201200") // NumberOfPatientRelatedStudies
 	command = append(command, "-r", "00201202") // NumberOfPatientRelatedSeries
@@ -347,8 +349,8 @@ func getInstance(bin, pacs, bind, dir, patient, studyUID, seriesUID, sopUID stri
 	return nil
 }
 
-func printPatientSOPList(bin, pacs, bind, dir, patient string, level int, get bool) error {
-	pl, err := patientFind(bin, pacs, bind, dir, patient)
+func printPatientSOPList(bin, pacs, bind, dir string, level int, get bool, query ...string) error {
+	pl, err := patientFind(bin, pacs, bind, dir, query...)
 	if err != nil {
 		return err
 	}
@@ -361,7 +363,7 @@ func printPatientSOPList(bin, pacs, bind, dir, patient string, level int, get bo
 		fmt.Printf("  ReferringPhysicianName: %s,\n", p.ReferringPhysicianName)
 		if level >= 1 { // study
 			fmt.Printf("  studies: [\n")
-			sl, err := studyList(bin, pacs, bind, dir, patient)
+			sl, err := studyList(bin, pacs, bind, dir, p.PatientName)
 			if err != nil {
 				return err
 			}
@@ -373,7 +375,7 @@ func printPatientSOPList(bin, pacs, bind, dir, patient string, level int, get bo
 				fmt.Printf("      NumberOfRelatedInstances: %s,\n", s.NumberOfRelatedInstances)
 				if level >= 2 { //  series
 					fmt.Printf("      series: [\n")
-					sel, err := seriesList(bin, pacs, bind, dir, patient, s.StudyInstanceUID)
+					sel, err := seriesList(bin, pacs, bind, dir, p.PatientName, s.StudyInstanceUID)
 					if err != nil {
 						return err
 					}
@@ -383,11 +385,11 @@ func printPatientSOPList(bin, pacs, bind, dir, patient string, level int, get bo
 						fmt.Printf("          Modality: %s,\n", se.Modality)
 						fmt.Printf("          NumberOfRelatedInstances: %s,\n", se.NumberOfRelatedInstances)
 						if level == 2 && get {
-							getSeries(bin, pacs, dir, bind, patient, s.StudyInstanceUID, se.SeriesInstanceUID)
+							getSeries(bin, pacs, dir, bind, p.PatientName, s.StudyInstanceUID, se.SeriesInstanceUID)
 						}
 						if level >= 3 { //  image
 							fmt.Printf("          instances: [\n")
-							sopl, err := sopList(bin, pacs, bind, dir, patient, s.StudyInstanceUID, se.SeriesInstanceUID)
+							sopl, err := sopList(bin, pacs, bind, dir, p.PatientName, s.StudyInstanceUID, se.SeriesInstanceUID)
 							if err != nil {
 								return err
 							}
@@ -428,6 +430,7 @@ query-retrieve -h # show this help
 # actions:
 list-all
 list-patient <patient>
+patient-level-query <patient-level-tag=value>
 get-patient <patient>`
 	fmt.Fprintln(os.Stderr, synopsis)
 }
@@ -482,7 +485,7 @@ func main() {
 			os.Exit(1)
 		}
 		for _, p := range pl {
-			err := printPatientSOPList(lib, pacs, bind, dir, p.PatientName, level, false)
+			err := printPatientSOPList(lib, pacs, bind, dir, level, false, "PatientName="+p.PatientName)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "[ERROR] printPatientSOPList: %s\n", err)
 				os.Exit(1)
@@ -495,7 +498,19 @@ func main() {
 			os.Exit(1)
 		}
 		patient := remaining[1]
-		err := printPatientSOPList(lib, pacs, bind, dir, patient, level, false)
+		err := printPatientSOPList(lib, pacs, bind, dir, level, false, "PatientName="+patient)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "[ERROR] printPatientSOPList: %s\n", err)
+			os.Exit(1)
+		}
+	case "patient-level-query":
+		if len(remaining) < 2 {
+			fmt.Printf("[ERROR] Missing query!\n")
+			synopsis()
+			os.Exit(1)
+		}
+		query := remaining[1:]
+		err := printPatientSOPList(lib, pacs, bind, dir, level, false, query...)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "[ERROR] printPatientSOPList: %s\n", err)
 			os.Exit(1)
@@ -507,7 +522,7 @@ func main() {
 			os.Exit(1)
 		}
 		patient := remaining[1]
-		err := printPatientSOPList(lib, pacs, bind, dir, patient, 2, true)
+		err := printPatientSOPList(lib, pacs, bind, dir, 2, true, "PatientName="+patient)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "[ERROR] printPatientSOPList: %s\n", err)
 			os.Exit(1)

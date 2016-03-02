@@ -24,6 +24,28 @@ func TestIntToBytes(t *testing.T) {
 		t.Errorf("Fail: %x", b)
 	}
 }
+
+func TestPutIntToByteSize(t *testing.T) {
+	b := [2]byte{}
+	putIntToByteSize2(&b, 11)
+	if !reflect.DeepEqual(b, [2]byte{0, 0xb}) {
+		t.Errorf("Fail: %x", b)
+	}
+	putIntToByteSize2(&b, 512)
+	if !reflect.DeepEqual(b, [2]byte{0x2, 0}) {
+		t.Errorf("Fail: %x", b)
+	}
+	c := [4]byte{}
+	putIntToByteSize4(&c, 11)
+	if !reflect.DeepEqual(c, [4]byte{0, 0, 0, 0xb}) {
+		t.Errorf("Fail: %x", c)
+	}
+	putIntToByteSize4(&c, 512)
+	if !reflect.DeepEqual(c, [4]byte{0, 0, 0x2, 0}) {
+		t.Errorf("Fail: %x", c)
+	}
+}
+
 func TestTS(t *testing.T) {
 	b := TrasnferSyntaxItem(ts.ImplicitVRLittleEndian)
 	ts := []byte{0x40, 0, 0, 0x11, 0x31, 0x2e, 0x32, 0x2e, 0x38, 0x34, 0x30, 0x2e, 0x31, 0x30, 0x30, 0x30, 0x38, 0x2e, 0x31, 0x2e, 0x32}

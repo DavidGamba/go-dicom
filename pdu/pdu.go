@@ -5,7 +5,7 @@ package pdu
 type AReleaseRequest struct {
 	PDUType   byte
 	Blank     [1]byte
-	PDULenght uint32
+	PDULenght [4]byte
 	Request   [4]byte
 }
 
@@ -13,8 +13,8 @@ type AReleaseRequest struct {
 type AAssociateRequest struct {
 	PDUType         byte
 	Blank           [1]byte
-	PDULenght       uint32
-	ProtocolVersion uint16
+	PDULenght       [4]byte
+	ProtocolVersion [2]byte
 	Blank2          [2]byte
 	CalledAE        [16]byte
 	CallingAE       [16]byte

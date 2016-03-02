@@ -48,17 +48,29 @@ func (qr *dicomqr) Dial() error {
 
 func (qr *dicomqr) Init() {
 	qr.ar = pdu.AAssociateRequest{
-		PDUType:         1,
-		ProtocolVersion: 1,
-		CalledAE:        qr.CalledAE,
-		CallingAE:       qr.CallingAE,
-		Content:         []byte{},
+		PDUType:   1,
+		CalledAE:  qr.CalledAE,
+		CallingAE: qr.CallingAE,
+		Content:   []byte{},
 	}
+	putIntToByteSize2(&qr.ar.ProtocolVersion, 1)
 
 	qr.rr = pdu.AReleaseRequest{
-		PDUType:   5,
-		PDULenght: 4,
+		PDUType: 5,
 	}
+	putIntToByteSize4(&qr.rr.PDULenght, 4)
+}
+
+func putIntToByteSize4(b *[4]byte, v uint32) {
+	b[0] = byte(v >> 24)
+	b[1] = byte(v >> 16)
+	b[2] = byte(v >> 8)
+	b[3] = byte(v)
+}
+
+func putIntToByteSize2(b *[2]byte, v int) {
+	b[0] = byte(v >> 8)
+	b[1] = byte(v)
 }
 
 func (qr *dicomqr) AR() (int, error) {
@@ -67,17 +79,12 @@ func (qr *dicomqr) AR() (int, error) {
 	}
 	l := len(qr.ar.Content)
 	l += 2 + 2 + 16 + 16 + 32
-	qr.ar.PDULenght = uint32(l)
+	putIntToByteSize4(&qr.ar.PDULenght, uint32(l))
 	b := []byte{}
-	// b := []byte{qr.ar.PDUType}
 	b = append(b, qr.ar.PDUType)
 	b = append(b, qr.ar.Blank[:]...)
-	b4 := make([]byte, 4)
-	binary.BigEndian.PutUint32(b4, qr.ar.PDULenght)
-	b = append(b, b4[:]...)
-	b2 := make([]byte, 2)
-	binary.BigEndian.PutUint16(b2, qr.ar.ProtocolVersion)
-	b = append(b, b2[:]...)
+	b = append(b, qr.ar.PDULenght[:]...)
+	b = append(b, qr.ar.ProtocolVersion[:]...)
 	b = append(b, qr.ar.Blank2[:]...)
 	b = append(b, qr.ar.CalledAE[:]...)
 	b = append(b, qr.ar.CallingAE[:]...)
@@ -92,9 +99,7 @@ func (qr *dicomqr) RR() (int, error) {
 	b := []byte{}
 	b = append(b, qr.rr.PDUType)
 	b = append(b, qr.rr.Blank[:]...)
-	b4 := make([]byte, 4)
-	binary.BigEndian.PutUint32(b4, qr.rr.PDULenght)
-	b = append(b, b4[:]...)
+	b = append(b, qr.rr.PDULenght[:]...)
 	b = append(b, qr.rr.Request[:]...)
 	printBytes(b)
 	i, err := qr.Conn.Write(b)

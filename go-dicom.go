@@ -58,14 +58,7 @@ func (qr *dicomqr) Init() {
 	qr.rr = pdu.AReleaseRequest{
 		PDUType: 5,
 	}
-	putIntToByteSize4(&qr.rr.PDULenght, 4)
-}
-
-func putIntToByteSize4(b *[4]byte, v uint32) {
-	b[0] = byte(v >> 24)
-	b[1] = byte(v >> 16)
-	b[2] = byte(v >> 8)
-	b[3] = byte(v)
+	qr.rr.Len()
 }
 
 func putIntToByteSize2(b *[2]byte, v int) {
@@ -77,30 +70,15 @@ func (qr *dicomqr) AR() (int, error) {
 	if len(qr.ar.Content) == 0 {
 		return 0, fmt.Errorf("AR has no content")
 	}
-	l := len(qr.ar.Content)
-	l += 2 + 2 + 16 + 16 + 32
-	putIntToByteSize4(&qr.ar.PDULenght, uint32(l))
-	b := []byte{}
-	b = append(b, qr.ar.PDUType)
-	b = append(b, qr.ar.Blank[:]...)
-	b = append(b, qr.ar.PDULenght[:]...)
-	b = append(b, qr.ar.ProtocolVersion[:]...)
-	b = append(b, qr.ar.Blank2[:]...)
-	b = append(b, qr.ar.CalledAE[:]...)
-	b = append(b, qr.ar.CallingAE[:]...)
-	b = append(b, qr.ar.Blank3[:]...)
-	b = append(b, qr.ar.Content...)
+	qr.ar.Len()
+	b := qr.ar.ToBytes()
 	printBytes(b)
 	i, err := qr.Conn.Write(b)
 	return i, err
 }
 
 func (qr *dicomqr) RR() (int, error) {
-	b := []byte{}
-	b = append(b, qr.rr.PDUType)
-	b = append(b, qr.rr.Blank[:]...)
-	b = append(b, qr.rr.PDULenght[:]...)
-	b = append(b, qr.rr.Request[:]...)
+	b := qr.rr.ToBytes()
 	printBytes(b)
 	i, err := qr.Conn.Write(b)
 	return i, err

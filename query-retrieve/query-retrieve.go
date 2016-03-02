@@ -6,6 +6,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/davidgamba/go-dicom/tag"
 	"github.com/davidgamba/go-getoptions" // as getoptions
 	"gopkg.in/xmlpath.v2"
 	"os"
@@ -18,49 +19,19 @@ import (
 var debug bool
 var hideInstances bool
 
-type patientLevel struct {
-	PatientName              string // 	(0010,0010)
-	PatientID                string //	(0010,0020)
-	NumberOfRelatedStudies   string //	(0020,1200)
-	NumberOfRelatedSeries    string //	(0020,1202)
-	NumberOfRelatedInstances string //	(0020,1204)
-	ReferringPhysicianName   string //  (0008,0090)
-}
-
-type studyLevel struct {
-	StudyInstanceUID         string //	(0020,000D)
-	AccessionNumber          string //	(0008,0050)
-	ModalitiesInStudy        string //	(0008,0061)
-	NumberOfRelatedSeries    string //	(0020,1206)
-	NumberOfRelatedInstances string //	(0020,1208)
-}
-
-type seriesLevel struct {
-	SeriesInstanceUID        string //	(0020,000E)
-	SeriesNumber             string //	(0020,0011)
-	Modality                 string //	(0008,0060)
-	NumberOfRelatedInstances string //	(0020,1209)
-}
-
-type instanceLevel struct {
-	SOPInstanceUID string //	(0000,0000)
-	Modality       string //	(0000,0000)
-	InstanceNumber string //	(0000,0000)
-}
-
-type byPatientName []patientLevel
+type byPatientName []tag.PatientLevel
 
 func (a byPatientName) Len() int           { return len(a) }
 func (a byPatientName) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a byPatientName) Less(i, j int) bool { return a[i].PatientName < a[j].PatientName }
 
-type byStudyInstanceUID []studyLevel
+type byStudyInstanceUID []tag.StudyLevel
 
 func (a byStudyInstanceUID) Len() int           { return len(a) }
 func (a byStudyInstanceUID) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a byStudyInstanceUID) Less(i, j int) bool { return a[i].StudyInstanceUID < a[j].StudyInstanceUID }
 
-type bySeriesNumber []seriesLevel
+type bySeriesNumber []tag.SeriesLevel
 
 func (a bySeriesNumber) Len() int      { return len(a) }
 func (a bySeriesNumber) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
@@ -78,7 +49,7 @@ func (a bySeriesNumber) Less(i, j int) bool {
 	return in < jn
 }
 
-type byInstanceNumber []instanceLevel
+type byInstanceNumber []tag.InstanceLevel
 
 func (a byInstanceNumber) Len() int      { return len(a) }
 func (a byInstanceNumber) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
@@ -109,12 +80,12 @@ func debugln(a ...interface{}) (n int, err error) {
 	return 0, nil
 }
 
-func patientList(bin, pacs, bind, dir string) ([]patientLevel, error) {
+func patientList(bin, pacs, bind, dir string) ([]tag.PatientLevel, error) {
 	return patientFind(bin, pacs, bind, dir, "*")
 }
 
-func patientFind(bin, pacs, bind, dir, patient string) ([]patientLevel, error) {
-	var pl []patientLevel
+func patientFind(bin, pacs, bind, dir, patient string) ([]tag.PatientLevel, error) {
+	var pl []tag.PatientLevel
 	command := []string{}
 	command = append(command, bin+string(os.PathSeparator)+"bin"+string(os.PathSeparator)+"findscu")
 	command = append(command, "-c", pacs)
@@ -157,7 +128,7 @@ func patientFind(bin, pacs, bind, dir, patient string) ([]patientLevel, error) {
 		pNS, _ := pNSPath.String(iter.Node())
 		pNSer, _ := pNSerPath.String(iter.Node())
 		pNIns, _ := pNInsPath.String(iter.Node())
-		pl = append(pl, patientLevel{
+		pl = append(pl, tag.PatientLevel{
 			PatientName:              pn,
 			PatientID:                pID,
 			NumberOfRelatedStudies:   pNS,
@@ -171,8 +142,8 @@ func patientFind(bin, pacs, bind, dir, patient string) ([]patientLevel, error) {
 	return pl, nil
 }
 
-func studyList(bin, pacs, bind, dir, patient string) ([]studyLevel, error) {
-	var sl []studyLevel
+func studyList(bin, pacs, bind, dir, patient string) ([]tag.StudyLevel, error) {
+	var sl []tag.StudyLevel
 	command := []string{}
 	command = append(command, bin+string(os.PathSeparator)+"bin"+string(os.PathSeparator)+"findscu")
 	command = append(command, "-c", pacs)
@@ -214,7 +185,7 @@ func studyList(bin, pacs, bind, dir, patient string) ([]studyLevel, error) {
 		sNSer, _ := sNSerPath.String(iter.Node())
 		sNIns, _ := sNInsPath.String(iter.Node())
 		sl = append(sl,
-			studyLevel{StudyInstanceUID: suid,
+			tag.StudyLevel{StudyInstanceUID: suid,
 				AccessionNumber:          san,
 				ModalitiesInStudy:        smod,
 				NumberOfRelatedSeries:    sNSer,
@@ -225,8 +196,8 @@ func studyList(bin, pacs, bind, dir, patient string) ([]studyLevel, error) {
 	return sl, nil
 }
 
-func seriesList(bin, pacs, bind, dir, patient, studyUID string) ([]seriesLevel, error) {
-	var sl []seriesLevel
+func seriesList(bin, pacs, bind, dir, patient, studyUID string) ([]tag.SeriesLevel, error) {
+	var sl []tag.SeriesLevel
 	command := []string{}
 	command = append(command, bin+string(os.PathSeparator)+"bin"+string(os.PathSeparator)+"findscu")
 	command = append(command, "-c", pacs)
@@ -266,7 +237,7 @@ func seriesList(bin, pacs, bind, dir, patient, studyUID string) ([]seriesLevel, 
 		smod, _ := smodPath.String(iter.Node())
 		sNIns, _ := sNInsPath.String(iter.Node())
 		sl = append(sl,
-			seriesLevel{SeriesInstanceUID: suid,
+			tag.SeriesLevel{SeriesInstanceUID: suid,
 				SeriesNumber:             sn,
 				Modality:                 smod,
 				NumberOfRelatedInstances: sNIns})
@@ -276,8 +247,8 @@ func seriesList(bin, pacs, bind, dir, patient, studyUID string) ([]seriesLevel, 
 	return sl, nil
 }
 
-func sopList(bin, pacs, bind, dir, patient, studyUID, seriesUID string) ([]instanceLevel, error) {
-	var sl []instanceLevel
+func sopList(bin, pacs, bind, dir, patient, studyUID, seriesUID string) ([]tag.InstanceLevel, error) {
+	var sl []tag.InstanceLevel
 	command := []string{}
 	command = append(command, bin+string(os.PathSeparator)+"bin"+string(os.PathSeparator)+"findscu")
 	command = append(command, "-c", pacs)
@@ -314,7 +285,7 @@ func sopList(bin, pacs, bind, dir, patient, studyUID, seriesUID string) ([]insta
 		sop, _ := sopPath.String(iter.Node())
 		modality, _ := modalityPath.String(iter.Node())
 		number, _ := numberPath.String(iter.Node())
-		sl = append(sl, instanceLevel{SOPInstanceUID: sop, Modality: modality, InstanceNumber: number})
+		sl = append(sl, tag.InstanceLevel{SOPInstanceUID: sop, Modality: modality, InstanceNumber: number})
 		debugf("%v\n", sl)
 	}
 	sort.Stable(byInstanceNumber(sl))

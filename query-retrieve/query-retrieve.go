@@ -411,6 +411,7 @@ func printPatientSOPList(bin, pacs, bind, dir, patient string, level int, get bo
 		}
 		fmt.Printf("}\n")
 	}
+	fmt.Printf("patientCount: %d\n", len(pl))
 	return nil
 }
 

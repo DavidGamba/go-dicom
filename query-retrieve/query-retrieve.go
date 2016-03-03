@@ -136,7 +136,7 @@ func patientLevelFind(bin, pacs, bind, dir string, query ...string) ([]tag.Patie
 	return pl, nil
 }
 
-func studyLevelFind(bin, pacs, bind, dir string, query ...string) ([]tag.StudyLevel, error) {
+func studyLevelFind(bin, pacs, bind, dir string, studyRoot bool, query ...string) ([]tag.StudyLevel, error) {
 	var sl []tag.StudyLevel
 	command := []string{}
 	command = append(command, bin+string(os.PathSeparator)+"bin"+string(os.PathSeparator)+"findscu")
@@ -144,6 +144,10 @@ func studyLevelFind(bin, pacs, bind, dir string, query ...string) ([]tag.StudyLe
 	command = append(command, "-b", bind)
 	for _, q := range query {
 		command = append(command, "-m", q)
+	}
+	if studyRoot {
+		command = append(command, "-r", "00100010") // PatientName
+		command = append(command, "-r", "00100020") // PatientID
 	}
 	command = append(command, "-r", "StudyInstanceUID")
 	command = append(command, "-r", "00080050") // AccessionNumber
@@ -175,6 +179,8 @@ func studyLevelFind(bin, pacs, bind, dir string, query ...string) ([]tag.StudyLe
 	sNSerPath := xmlpath.MustCompile("DicomAttribute[@keyword='NumberOfStudyRelatedSeries']/Value")
 	sNInsPath := xmlpath.MustCompile("DicomAttribute[@keyword='NumberOfStudyRelatedInstances']/Value")
 	rnPath := xmlpath.MustCompile("DicomAttribute[@keyword='ReferringPhysicianName']/PersonName[@number='1']/Alphabetic/FamilyName")
+	pnPath := xmlpath.MustCompile("DicomAttribute[@keyword='PatientName']/PersonName[@number='1']/Alphabetic/FamilyName")
+	pIDPath := xmlpath.MustCompile("DicomAttribute[@keyword='PatientID']/Value")
 	iter := path.Iter(root)
 	for iter.Next() {
 		suid, _ := suidPath.String(iter.Node())
@@ -183,14 +189,20 @@ func studyLevelFind(bin, pacs, bind, dir string, query ...string) ([]tag.StudyLe
 		sNSer, _ := sNSerPath.String(iter.Node())
 		sNIns, _ := sNInsPath.String(iter.Node())
 		rn, _ := rnPath.String(iter.Node())
-		sl = append(sl,
-			tag.StudyLevel{StudyInstanceUID: suid,
-				AccessionNumber:          san,
-				ModalitiesInStudy:        smod,
-				ReferringPhysicianName:   rn,
-				NumberOfRelatedSeries:    sNSer,
-				NumberOfRelatedInstances: sNIns})
-		debugf("%v\n", sl)
+		pn, _ := pnPath.String(iter.Node())
+		pID, _ := pIDPath.String(iter.Node())
+		csl := tag.StudyLevel{StudyInstanceUID: suid,
+			AccessionNumber:          san,
+			ModalitiesInStudy:        smod,
+			ReferringPhysicianName:   rn,
+			NumberOfRelatedSeries:    sNSer,
+			NumberOfRelatedInstances: sNIns,
+			PatientLevel:             tag.PatientLevel{},
+		}
+		csl.PatientLevel.PatientName = pn
+		csl.PatientLevel.PatientID = pID
+		debugf("%v\n", csl)
+		sl = append(sl, csl)
 	}
 	sort.Stable(byStudyInstanceUID(sl))
 	return sl, nil
@@ -368,15 +380,24 @@ func printPatientSOPList(bin, pacs, bind, dir string, level int, get bool, query
 }
 
 func printStudySOPList(bin, pacs, bind, dir string, level int, get bool, patient tag.PatientLevel, query ...string) error {
+	var studyRoot bool
+	if patient.PatientName == "" && patient.PatientID == "" {
+		studyRoot = true
+	}
 	fmt.Printf("  studies: [\n")
-	sl, err := studyLevelFind(bin, pacs, bind, dir, query...)
+	sl, err := studyLevelFind(bin, pacs, bind, dir, studyRoot, query...)
 	if err != nil {
 		return err
 	}
 	for _, s := range sl {
-		s.PatientLevel = patient
 		fmt.Printf("    { StudyInstanceUID: %s,\n", s.StudyInstanceUID)
 		fmt.Printf("      AccessionNumber: %s,\n", s.AccessionNumber)
+		if studyRoot {
+			fmt.Printf("      PatientName: %s,\n", s.PatientLevel.PatientName)
+			fmt.Printf("      PatientID: %s,\n", s.PatientLevel.PatientID)
+		} else {
+			s.PatientLevel = patient
+		}
 		fmt.Printf("      ModalitiesInStudy: %s,\n", s.ModalitiesInStudy)
 		fmt.Printf("      NumberOfRelatedSeries: %s,\n", s.NumberOfRelatedSeries)
 		fmt.Printf("      NumberOfRelatedInstances: %s,\n", s.NumberOfRelatedInstances)
@@ -517,6 +538,18 @@ func main() {
 		err := printPatientSOPList(lib, pacs, bind, dir, level, false, query...)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "[ERROR] printPatientSOPList: %s\n", err)
+			os.Exit(1)
+		}
+	case "study-level-query":
+		if len(remaining) < 2 {
+			fmt.Printf("[ERROR] Missing query!\n")
+			synopsis()
+			os.Exit(1)
+		}
+		query := remaining[1:]
+		err := printStudySOPList(lib, pacs, bind, dir, level, false, tag.PatientLevel{}, query...)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "[ERROR] printStudySOPList: %s\n", err)
 			os.Exit(1)
 		}
 	case "get-patient":

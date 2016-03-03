@@ -82,6 +82,10 @@ func debugln(a ...interface{}) (n int, err error) {
 
 func patientLevelFind(bin, pacs, bind, dir string, query ...string) ([]tag.PatientLevel, error) {
 	var pl []tag.PatientLevel
+	err := os.Remove(dir + string(os.PathSeparator) + "001.dcm")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "[ERROR] command: %s\n", err)
+	}
 	command := []string{}
 	command = append(command, bin+string(os.PathSeparator)+"bin"+string(os.PathSeparator)+"findscu")
 	command = append(command, "-c", pacs)
@@ -138,6 +142,10 @@ func patientLevelFind(bin, pacs, bind, dir string, query ...string) ([]tag.Patie
 
 func studyLevelFind(bin, pacs, bind, dir string, studyRoot bool, query ...string) ([]tag.StudyLevel, error) {
 	var sl []tag.StudyLevel
+	err := os.Remove(dir + string(os.PathSeparator) + "001.dcm")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "[ERROR] command: %s\n", err)
+	}
 	command := []string{}
 	command = append(command, bin+string(os.PathSeparator)+"bin"+string(os.PathSeparator)+"findscu")
 	command = append(command, "-c", pacs)
@@ -210,6 +218,10 @@ func studyLevelFind(bin, pacs, bind, dir string, studyRoot bool, query ...string
 
 func seriesList(bin, pacs, bind, dir, patient, studyUID string) ([]tag.SeriesLevel, error) {
 	var sl []tag.SeriesLevel
+	err := os.Remove(dir + string(os.PathSeparator) + "001.dcm")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "[ERROR] command: %s\n", err)
+	}
 	command := []string{}
 	command = append(command, bin+string(os.PathSeparator)+"bin"+string(os.PathSeparator)+"findscu")
 	command = append(command, "-c", pacs)
@@ -261,6 +273,10 @@ func seriesList(bin, pacs, bind, dir, patient, studyUID string) ([]tag.SeriesLev
 
 func sopList(bin, pacs, bind, dir, patient, studyUID, seriesUID string) ([]tag.InstanceLevel, error) {
 	var sl []tag.InstanceLevel
+	err := os.Remove(dir + string(os.PathSeparator) + "001.dcm")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "[ERROR] command: %s\n", err)
+	}
 	command := []string{}
 	command = append(command, bin+string(os.PathSeparator)+"bin"+string(os.PathSeparator)+"findscu")
 	command = append(command, "-c", pacs)

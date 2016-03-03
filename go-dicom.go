@@ -67,7 +67,6 @@ func (qr *dicomqr) Init() {
 	qr.rr = pdu.AReleaseRequest{
 		PDUType: 5,
 	}
-	qr.rr.Len()
 }
 
 func putIntToByteSize2(b *[2]byte, v int) {
@@ -79,7 +78,6 @@ func (qr *dicomqr) AR() (int, error) {
 	if len(qr.ar.Content) == 0 {
 		return 0, fmt.Errorf("AR has no content")
 	}
-	qr.ar.Len()
 	b := qr.ar.ToBytes()
 	printBytes(b)
 	i, err := qr.Conn.Write(b)

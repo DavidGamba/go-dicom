@@ -33,8 +33,19 @@ type PDATATFPDU struct {
 // PDVItem Presentation Data Value Item
 type PDVItem struct {
 	Lenght        [4]byte
-	PresContextID byte   // Odd Integers between 1 and 255
-	Content       []byte // PDV, DICOM message, Command or Data Set Information
+	PresContextID byte // Odd Integers between 1 and 255
+	Context       byte // Abstract syntax ID to use
+	Flag          byte // Message Control Header
+	// 0 - Message Data set Information
+	// 1 - Message Command Information
+	// 0-1 - Not last fragment
+	// 2-3 - Last fragment
+	Content []byte // Message, Command or Data. Even bytes only
+}
+
+// CFINDRQDATA C-FIND-RQ DATA
+type CFINDRQDATA struct {
+	PDU PDATATFPDU
 }
 
 // AppContextItem Application Context Item
@@ -110,6 +121,7 @@ func (e *PDVItem) Len() int {
 
 // ToBytes converts AAssociateRequest into []byte
 func (e *AAssociateRequest) ToBytes() []byte {
+	e.Len()
 	b := []byte{}
 	b = append(b, e.PDUType)
 	b = append(b, e.Blank[:]...)
@@ -125,6 +137,7 @@ func (e *AAssociateRequest) ToBytes() []byte {
 
 // ToBytes converts AReleaseRequest into []byte
 func (e *AReleaseRequest) ToBytes() []byte {
+	e.Len()
 	b := []byte{}
 	b = append(b, e.PDUType)
 	b = append(b, e.Blank[:]...)
@@ -135,6 +148,7 @@ func (e *AReleaseRequest) ToBytes() []byte {
 
 // ToBytes converts AppContextItem into []byte
 func (e *AppContextItem) ToBytes() []byte {
+	e.Len()
 	b := []byte{}
 	b = append(b, e.ItemType)
 	b = append(b, e.Blank[:]...)
@@ -145,11 +159,37 @@ func (e *AppContextItem) ToBytes() []byte {
 
 // ToBytes converts AbstractSyntaxItem into []byte
 func (e *AbstractSyntaxItem) ToBytes() []byte {
+	e.Len()
 	b := []byte{}
 	b = append(b, e.ItemType)
 	b = append(b, e.Blank[:]...)
 	b = append(b, e.Lenght[:]...)
 	b = append(b, e.AbstractSyntax[:]...)
+	return b
+}
+
+// ToBytes converts PDVItem into []byte
+func (e *PDVItem) ToBytes() []byte {
+	e.Len()
+	b := []byte{}
+	b = append(b, e.Lenght[:]...)
+	b = append(b, e.PresContextID)
+	b = append(b, e.Context)
+	b = append(b, e.Flag)
+	b = append(b, e.Content[:]...)
+	return b
+}
+
+// ToBytes converts PDATATFPDU into []byte
+func (e *PDATATFPDU) ToBytes() []byte {
+	e.Len()
+	b := []byte{}
+	b = append(b, e.PDUType)
+	b = append(b, e.Blank[:]...)
+	b = append(b, e.PDULenght[:]...)
+	for _, i := range e.Content {
+		b = append(b, i.ToBytes()[:]...)
+	}
 	return b
 }
 
@@ -159,7 +199,6 @@ func AppContext(name string) []byte {
 		ItemType:       0x10,
 		AppContextName: []byte(name),
 	}
-	e.Len()
 	return e.ToBytes()
 }
 
@@ -169,6 +208,22 @@ func AbstractSyntax(name string) []byte {
 		ItemType:       0x30,
 		AbstractSyntax: []byte(name),
 	}
-	e.Len()
 	return e.ToBytes()
+}
+
+// CFindRQ ...
+func CFindRQ(sopclass, level string) []byte {
+	pdu1 := PDVItem{
+		PresContextID: 0x1,
+		Context:       0x1,
+		Flag:          0x3,
+		Content:       []byte{},
+	}
+	e := CFINDRQDATA{
+		PDU: PDATATFPDU{
+			PDUType: 0x4,
+		},
+	}
+	e.PDU.Content = append(e.PDU.Content, pdu1)
+	return e.PDU.ToBytes()
 }

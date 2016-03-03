@@ -24,6 +24,15 @@ import (
 	"strings"
 )
 
+// AppContextName = "1.2.840.10008.3.1.1.1"
+const AppContextName = "1.2.840.10008.3.1.1.1"
+
+// ImplementationClassUID = "1.2.40.0.13.1.1"
+const ImplementationClassUID = "1.2.40.0.13.1.1"
+
+// ImplementationVersion = "go-dicom-0.1.0"
+const ImplementationVersion = "go-dicom-0.1.0"
+
 type dicomqr struct {
 	CalledAE  [16]byte
 	CallingAE [16]byte
@@ -97,14 +106,6 @@ func padRight(str, pad string, lenght int) string {
 	}
 }
 
-// AppContextName = "1.2.840.10008.3.1.1.1"
-const AppContextName = "1.2.840.10008.3.1.1.1"
-
-// AppContextItem returns a byte slice with app context item.
-func AppContextItem() []byte {
-	return stringItem([]byte{0x10}, AppContextName, "AppContextItem")
-}
-
 // PressContextItem returns a byte slice with press context item.
 func PressContextItem(items ...[]byte) []byte {
 	b := []byte{32}                               // itemType
@@ -171,12 +172,6 @@ func MaximunLenghtItem(lenght uint32) []byte {
 	printBytes(b)
 	return b
 }
-
-// ImplementationClassUID = "1.2.40.0.13.1.1"
-const ImplementationClassUID = "1.2.40.0.13.1.1"
-
-// ImplementationVersion = "go-dicom-0.1.0"
-const ImplementationVersion = "go-dicom-0.1.0"
 
 // ImplementationUIDItem returns a byte slice
 func ImplementationUIDItem() []byte {
@@ -323,7 +318,7 @@ func main() {
 	qr.Init()
 	fmt.Printf("%v\n", qr.ar)
 
-	qr.ARAdd(AppContextItem())
+	qr.ARAdd(pdu.AppContext(AppContextName))
 
 	qr.ARAdd(PressContextItem(
 		AbstractSyntaxItem(),

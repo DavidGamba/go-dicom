@@ -42,7 +42,15 @@ type AppContextItem struct {
 	ItemType       byte
 	Blank          [1]byte
 	Lenght         [2]byte
-	AppContextName []byte // Only One < 64 bytes
+	AppContextName []byte // Only One <= 64 bytes
+}
+
+// AbstractSyntaxItem Abstract Syntax Item
+type AbstractSyntaxItem struct {
+	ItemType       byte
+	Blank          [1]byte
+	Lenght         [2]byte
+	AbstractSyntax []byte // Only One in RQ, not present in AC <= 64 bytes
 }
 
 // BigEndian Int to [2]byte
@@ -62,6 +70,12 @@ func putIntToByteSize4(b *[4]byte, v uint32) {
 // Len get the len of AppContextItem
 func (e *AppContextItem) Len() {
 	l := len(e.AppContextName)
+	putIntToByteSize2(&e.Lenght, uint16(l))
+}
+
+// Len get the len of AbstractSyntaxItem
+func (e *AbstractSyntaxItem) Len() {
+	l := len(e.AbstractSyntax)
 	putIntToByteSize2(&e.Lenght, uint16(l))
 }
 
@@ -129,11 +143,31 @@ func (e *AppContextItem) ToBytes() []byte {
 	return b
 }
 
-// AppContext returns a byte slice with app context item.
+// ToBytes converts AbstractSyntaxItem into []byte
+func (e *AbstractSyntaxItem) ToBytes() []byte {
+	b := []byte{}
+	b = append(b, e.ItemType)
+	b = append(b, e.Blank[:]...)
+	b = append(b, e.Lenght[:]...)
+	b = append(b, e.AbstractSyntax[:]...)
+	return b
+}
+
+// AppContext returns a byte slice with app context item
 func AppContext(name string) []byte {
 	e := AppContextItem{
 		ItemType:       0x10,
 		AppContextName: []byte(name),
+	}
+	e.Len()
+	return e.ToBytes()
+}
+
+// AbstractSyntax returns a byte slice with abstract syntax item
+func AbstractSyntax(name string) []byte {
+	e := AbstractSyntaxItem{
+		ItemType:       0x30,
+		AbstractSyntax: []byte(name),
 	}
 	e.Len()
 	return e.ToBytes()

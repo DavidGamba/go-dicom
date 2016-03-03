@@ -321,7 +321,7 @@ func main() {
 	qr.ARAdd(pdu.AppContext(AppContextName))
 
 	qr.ARAdd(PressContextItem(
-		AbstractSyntaxItem(),
+		pdu.AbstractSyntax(sopclass.PatientRootQRIMFind),
 		TrasnferSyntaxItem(ts.ImplicitVRLittleEndian),
 		TrasnferSyntaxItem(ts.ExplicitVRLittleEndian),
 		TrasnferSyntaxItem(ts.ExplicitVRBigEndian),

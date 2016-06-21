@@ -472,6 +472,7 @@ query-retrieve -h # show this help
 list-all
 list-patient <patient>
 patient-level-query <patient-level-tag=value>
+study-level-query <study-level-tag=value>
 get-patient <patient>`
 	fmt.Fprintln(os.Stderr, synopsis)
 }
@@ -480,7 +481,7 @@ func main() {
 	var help bool
 	var pacs, bind, lib, dir string
 	var level int
-	opt := getoptions.GetOptions()
+	opt := getoptions.New()
 	opt.BoolVar(&help, "help", false)
 	opt.BoolVar(&debug, "debug", false)
 	opt.BoolVar(&hideInstances, "hide-instances", false)
@@ -500,12 +501,12 @@ func main() {
 		os.Exit(1)
 	}
 
-	if !opt.Called["connect"] {
+	if !opt.Called("connect") {
 		fmt.Fprintf(os.Stderr, "[ERROR] missing --connect option\n")
 		synopsis()
 		os.Exit(1)
 	}
-	if !opt.Called["lib"] {
+	if !opt.Called("lib") {
 		fmt.Fprintf(os.Stderr, "[ERROR] missing dcm4chee --lib option\n")
 		synopsis()
 		os.Exit(1)
@@ -567,6 +568,19 @@ func main() {
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "[ERROR] printStudySOPList: %s\n", err)
 			os.Exit(1)
+		}
+	case "get-all":
+		pl, err := patientLevelFind(lib, pacs, bind, dir, "PatientName=*")
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "[ERROR] patientList: %s\n", err)
+			os.Exit(1)
+		}
+		for _, p := range pl {
+			err := printPatientSOPList(lib, pacs, bind, dir, 2, true, "PatientName="+p.PatientName)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "[ERROR] printPatientSOPList: %s\n", err)
+				os.Exit(1)
+			}
 		}
 	case "get-patient":
 		if len(remaining) < 2 {

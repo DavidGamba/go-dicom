@@ -71,7 +71,7 @@ func putIntToByteSize2(b *[2]byte, v uint16) {
 }
 
 // BigEndian Int to [4]byte
-func putIntToByteSize4(b *[4]byte, v uint32) {
+func PutIntToByteSize4(b *[4]byte, v uint32) {
 	b[0] = byte(v >> 24)
 	b[1] = byte(v >> 16)
 	b[2] = byte(v >> 8)
@@ -94,12 +94,12 @@ func (e *AbstractSyntaxItem) Len() {
 func (e *AAssociateRequest) Len() {
 	l := len(e.Content)
 	l += 2 + 2 + 16 + 16 + 32
-	putIntToByteSize4(&e.PDULenght, uint32(l))
+	PutIntToByteSize4(&e.PDULenght, uint32(l))
 }
 
 // Len get the len of AReleaseRequest
 func (e *AReleaseRequest) Len() {
-	putIntToByteSize4(&e.PDULenght, uint32(4))
+	PutIntToByteSize4(&e.PDULenght, uint32(4))
 }
 
 // Len get the len of PDATATFPDU
@@ -108,14 +108,14 @@ func (e *PDATATFPDU) Len() {
 	for _, c := range e.Content {
 		l += c.Len() + 5
 	}
-	putIntToByteSize4(&e.PDULenght, uint32(l))
+	PutIntToByteSize4(&e.PDULenght, uint32(l))
 }
 
 // Len get the len of PDVItem
 func (e *PDVItem) Len() int {
 	l := len(e.Content)
 	l++
-	putIntToByteSize4(&e.Lenght, uint32(l))
+	PutIntToByteSize4(&e.Lenght, uint32(l))
 	return l
 }
 

@@ -297,7 +297,7 @@ func main() {
 	log.SetFlags(log.Lshortfile)
 	var host, ae string
 	var port int
-	opt := getoptions.GetOptions()
+	opt := getoptions.New()
 	opt.StringVar(&host, "host", "localhost")
 	opt.IntVar(&port, "port", 11112)
 	opt.StringVar(&ae, "ae", "PACSAE")

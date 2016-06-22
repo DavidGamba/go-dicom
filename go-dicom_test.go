@@ -9,6 +9,7 @@
 package main
 
 import (
+	"github.com/davidgamba/go-dicom/pdu"
 	"github.com/davidgamba/go-dicom/syntax/ts"
 	"reflect"
 	"testing"
@@ -36,11 +37,11 @@ func TestPutIntToByteSize(t *testing.T) {
 		t.Errorf("Fail: %x", b)
 	}
 	c := [4]byte{}
-	putIntToByteSize4(&c, 11)
+	pdu.PutIntToByteSize4(&c, 11)
 	if !reflect.DeepEqual(c, [4]byte{0, 0, 0, 0xb}) {
 		t.Errorf("Fail: %x", c)
 	}
-	putIntToByteSize4(&c, 512)
+	pdu.PutIntToByteSize4(&c, 512)
 	if !reflect.DeepEqual(c, [4]byte{0, 0, 0x2, 0}) {
 		t.Errorf("Fail: %x", c)
 	}

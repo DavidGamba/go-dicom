@@ -1,0 +1,15 @@
+= dcmdump
+
+A little script to dump the metadata of a dcm file.
+
+== DCM file
+
+The link:http://dicom.nema.org/medical/dicom/current/output/chtml/part10/chapter_7.html[DICOM File Format] Specifies a preamble of 128 bytes set to `00H` and then four bytes containing the character string "DICM".
+
+The rest of the DICOM file is composed of Data Sets, the link:http://dicom.nema.org/dicom/2013/output/chtml/part05/chapter_7.html[Data Set] is described by the standard.
+
+The description of each VR can be found link:http://dicom.nema.org/medical/dicom/current/output/html/part05.html#table_6.2-1[here].
+
+The list of most tags and data elements can be found link:http://dicom.nema.org/medical/dicom/current/output/html/part06.html#chapter_6[here].
+
+A good list of all DICOM tags is found link:http://www.sno.phy.queensu.ca/~phil/exiftool/TagNames/DICOM.html[here].

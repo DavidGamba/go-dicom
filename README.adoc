@@ -1,8 +1,16 @@
 = go-dicom
+David Gamba, https://github.com/DavidGamba
+ifdef::env-github,env-browser[:outfilesuffix: .adoc]
 
-Golang based implementation of the DICOM Q/R standard
+Golang based implementation of the DICOM
 
 NOTE: This repository is mostly a playground to better understand the DICOM standard.
+
+== Scripts
+
+* go-dicom: DICOM Q/R playground.
+
+* <<dcmdump/README#,dcmdump>>: DICOM file Metadata dump.
 
 == LICENSE
 

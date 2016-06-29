@@ -9,10 +9,13 @@ Golang based implementation of the DICOM standard.
 This repository holds different tools I use when working with different PACS servers.
 
 link:dcmdump[]::
-Golang based DICOM file Metadata dump. v0.1.0. (It works for most files!)
+Golang based DICOM file Metadata dump.
 +
 * Current version assumes explicit VR for all fields (except of course for SQ items).
-* Missing private tags. Marked as MISSING in output and they generate an error to `os.Stderr`
+* Missing private tags.
+Marked as MISSING in output and they generate an error to `os.Stderr`
+* Missing handling for VM.
+Backlash separator shown in value.
 
 link:query-retrieve[]:: Wrapper around dcm4chee's `findscu` and `getscu`.
 It allows to find/get all studies for a patient or all patients in the PACS.

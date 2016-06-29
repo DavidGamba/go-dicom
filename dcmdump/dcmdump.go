@@ -31,13 +31,6 @@ func debugln(a ...interface{}) (n int, err error) {
 	return 0, nil
 }
 
-func synopsis() {
-	synopsis := `dcm-read <dcm_file_path>
-  [--debug]
-`
-	fmt.Fprintln(os.Stderr, synopsis)
-}
-
 type stringSlice []string
 
 func (s stringSlice) contains(a string) bool {
@@ -474,25 +467,41 @@ func parseSQDataElement(bytes []byte, n int, explicit bool) int {
 	return n
 }
 
+func synopsis() {
+	synopsis := `dcmdump <dcm_file> [--debug]
+`
+	fmt.Fprintln(os.Stderr, synopsis)
+}
+
 func main() {
 
 	var file string
 	opt := getoptions.New()
+	opt.Bool("help", false)
 	opt.BoolVar(&debug, "debug", false)
-	opt.StringVar(&file, "file", "")
-	_, err := opt.Parse(os.Args[1:])
+	remaining, err := opt.Parse(os.Args[1:])
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "ERROR: %s\n", err)
 		os.Exit(1)
 	}
-	if !opt.Called("file") {
-		fmt.Fprintf(os.Stderr, "ERROR: Missing file\n")
+	if opt.Called("help") {
+		synopsis()
 		os.Exit(1)
 	}
+	if len(remaining) < 1 {
+		fmt.Fprintf(os.Stderr, "ERROR: Missing file\n")
+		synopsis()
+		os.Exit(1)
+	}
+	file = remaining[0]
 	if !debug {
 		log.SetOutput(ioutil.Discard)
 	}
 	bytes, err := ioutil.ReadFile(file)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "ERROR: failed to read file: '%s'\n", err)
+		os.Exit(1)
+	}
 
 	// Intro
 	n := 128

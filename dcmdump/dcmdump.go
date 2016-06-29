@@ -414,12 +414,12 @@ func parseSQDataElement(bytes []byte, n int, explicit bool) int {
 	sequenceDelimitationItem := false
 	for !sequenceDelimitationItem {
 		m := n + 4
-		t := bytes[n:m]
 		printBytes(bytes[n:m])
+		t := bytes[n:m]
 		tagStr := tagString(t)
-		log.Printf("Tag: %X -> %s\n", t, tagStr)
+		log.Printf("n: %d, Tag: %X -> %s\n", n, t, tagStr)
 		if _, ok := tag.Tag[tagStr]; !ok {
-			fmt.Fprintf(os.Stderr, "ERROR: Missing tag '%s'\n", tagStr)
+			fmt.Fprintf(os.Stderr, "ERROR: %d Missing tag '%s'\n", n, tagStr)
 			return n
 		}
 		if tag.Tag[tagStr]["name"] == "SequenceDelimitationItem" {
@@ -438,12 +438,12 @@ func parseSQDataElement(bytes []byte, n int, explicit bool) int {
 			debugln("Lenght undefined")
 			for {
 				// Find FFFEE00D: ItemDelimitationItem
-				tag := bytes[n : n+4]
-				tagStr := tagString(tag)
-				if tagStr == "FFFEE00D" {
+				endTag := bytes[n : n+4]
+				endTagStr := tagString(endTag)
+				if endTagStr == "FFFEE00D" {
 					m += 4
 					printBytes(bytes[n:m])
-					log.Printf("Tag: %X -> %s\n", tag, tagStr)
+					log.Printf("Tag: %X -> %s\n", endTag, endTagStr)
 					n = m
 					debugln("Item Delim found")
 					m += 4
@@ -460,6 +460,20 @@ func parseSQDataElement(bytes []byte, n int, explicit bool) int {
 			debugln("Data")
 			m += len
 			printBytes(bytes[n:m])
+			if len < 128 {
+				if _, ok := tag.Tag[tagStr]; !ok {
+					// TODO: Handle implicit VR
+					fmt.Printf("    (%s) %s %s\n", tagStr, "MISSING", stringData(bytes[n:m], "SQ"))
+				} else {
+					fmt.Printf("    (%s) %s %s\n", tagStr, tag.Tag[tagStr]["name"], stringData(bytes[n:m], "SQ"))
+				}
+			} else {
+				if _, ok := tag.Tag[tagStr]; !ok {
+					fmt.Printf("    (%s) %s %s\n", tagStr, "MISSING", "...")
+				} else {
+					fmt.Printf("    (%s) %s %s\n", tagStr, tag.Tag[tagStr]["name"], "...")
+				}
+			}
 			n = m
 		}
 	}

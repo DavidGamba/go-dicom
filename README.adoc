@@ -2,15 +2,28 @@
 David Gamba, https://github.com/DavidGamba
 ifdef::env-github,env-browser[:outfilesuffix: .adoc]
 
-Golang based implementation of the DICOM
-
-NOTE: This repository is mostly a playground to better understand the DICOM standard.
+Golang based implementation of the DICOM standard.
 
 == Scripts
 
-* go-dicom: DICOM Q/R playground.
+This repository holds different tools I use when working with different PACS servers.
 
-* <<dcmdump/README#,dcmdump>>: DICOM file Metadata dump.
+link:dcmdump[]::
+Golang based DICOM file Metadata dump. v0.1.0. (It works for most files!)
++
+* Current version assumes explicit VR for all fields (except of course for SQ items).
+* Missing private tags. Marked as MISSING in output and they generate an error to `os.Stderr`
+
+link:query-retrieve[]:: Wrapper around dcm4chee's `findscu` and `getscu`.
+It allows to find/get all studies for a patient or all patients in the PACS.
++
+* It generates json output that can list each instance (tries to, haven't fully done proper json yet) to verify that the contents of what was retrieved match the elements in the archive.
+* Since it is doing a call to findscu or getscu per instance (or series) instead or reusing a single association, it is very slow.
+
+link:qr[]:: DICOM Q/R playground.
++
+This dir is mostly a playground to better understand the DICOM Q/R standard.
+Nothing useful here.
 
 == LICENSE
 

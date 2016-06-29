@@ -13,9 +13,9 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
-	"github.com/davidgamba/go-dicom/pdu"
-	"github.com/davidgamba/go-dicom/sopclass"
-	"github.com/davidgamba/go-dicom/syntax/ts"
+	"github.com/davidgamba/go-dicom/qr/pdu"
+	"github.com/davidgamba/go-dicom/qr/sopclass"
+	"github.com/davidgamba/go-dicom/qr/syntax/ts"
 	"github.com/davidgamba/go-getoptions" // As getoptions
 	"log"
 	"net"

@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/davidgamba/go-dicom/dcmdump/tag"
+	"github.com/davidgamba/go-dicom/dcmdump/ts"
 	vri "github.com/davidgamba/go-dicom/dcmdump/vr"
 	"github.com/davidgamba/go-getoptions"
 )
@@ -146,6 +147,11 @@ func printBytes(b []byte) {
 }
 
 func (de *DataElement) stringData() string {
+	if de.TagStr == "00020010" {
+		if tsStr, ok := ts.TS[string(de.Data)]; ok {
+			return string(de.Data) + " " + tsStr["name"].(string)
+		}
+	}
 	if _, ok := vri.VR[de.VRStr]["fixed"]; ok && vri.VR[de.VRStr]["fixed"].(bool) {
 		s := ""
 		l := len(de.Data)

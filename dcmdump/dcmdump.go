@@ -49,6 +49,32 @@ type dicomqr struct {
 	Rest  []byte
 }
 
+// DataElement -
+type DataElement struct {
+	N        int
+	TagGroup []byte // [2]byte
+	TagElem  []byte // [2]byte
+	TagStr   string
+	VR       []byte // [2]byte
+	VRStr    string
+	VRLen    int
+	Len      uint32
+	Data     []byte
+	PartOfSQ bool
+}
+
+// String -
+func (de *DataElement) String() string {
+	tn := tag.Tag[de.TagStr]["name"]
+	if _, ok := tag.Tag[de.TagStr]; !ok {
+		tn = "MISSING"
+	}
+	if de.Len < 128 {
+		return fmt.Sprintf("%04d (%s) %s %d %d %s %s", de.N, de.TagStr, de.VRStr, de.VRLen, de.Len, tn, stringData(de.Data, de.VRStr))
+	}
+	return fmt.Sprintf("%04d (%s) %s %d %d %s %s", de.N, de.TagStr, de.VRStr, de.VRLen, de.Len, tn, "...")
+}
+
 type fh os.File
 
 func readNBytes(f *os.File, size int) ([]byte, error) {
@@ -164,9 +190,14 @@ func parseDataElement(bytes []byte, n int, explicit bool) {
 	// Data element
 	m := n
 	for n <= l && m+4 <= l {
+		de := DataElement{N: n}
 		m += 4
 		printBytes(bytes[n:m])
 		t := bytes[n:m]
+		de.TagGroup = bytes[n : n+2]
+		de.TagElem = bytes[n+2 : n+4]
+		de.TagStr = tagString(t)
+		// TODO: Clean up tagString
 		tagStr := tagString(t)
 		log.Printf("n: %d, Tag: %X -> %s\n", n, t, tagStr)
 		n = m
@@ -183,6 +214,8 @@ func parseDataElement(bytes []byte, n int, explicit bool) {
 			debugf("%d VR\n", n)
 			m += 2
 			printBytes(bytes[n:m])
+			de.VR = bytes[n:m]
+			de.VRStr = string(bytes[n:m])
 			vr = string(bytes[n:m])
 			if _, ok := vri.VR[vr]; !ok {
 				// if bytes[n] == 0x0 && bytes[n+1] == 0x0 {
@@ -230,26 +263,16 @@ func parseDataElement(bytes []byte, n int, explicit bool) {
 			len = int(len32)
 			n = m
 		}
+		de.Len = uint32(len)
 		debugf("Lenght: %d\n", len)
 		if vr == "SQ" {
 			n = parseSQDataElement(bytes, n, explicit)
 			m = n
 		} else {
 			m += len
-			if len < 128 {
-				if _, ok := tag.Tag[tagStr]; !ok {
-					fmt.Printf("(%s) %s %s %s\n", tagStr, vr, "MISSING", stringData(bytes[n:m], vr))
-				} else {
-					fmt.Printf("(%s) %s %s %s\n", tagStr, vr, tag.Tag[tagStr]["name"], stringData(bytes[n:m], vr))
-				}
-			} else {
-				if _, ok := tag.Tag[tagStr]; !ok {
-					fmt.Printf("(%s) %s %s %s\n", tagStr, vr, "MISSING", "...")
-				} else {
-					fmt.Printf("(%s) %s %s %s\n", tagStr, vr, tag.Tag[tagStr]["name"], "...")
-				}
-			}
 			printBytes(bytes[n:m])
+			de.Data = bytes[n:m]
+			fmt.Println(de.String())
 			n = m
 		}
 	}

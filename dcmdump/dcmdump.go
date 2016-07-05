@@ -106,7 +106,6 @@ func stripCtlFromUTF8(str string) string {
 
 func tagString(b []byte) string {
 	tag := strings.ToUpper(fmt.Sprintf("%02x%02x%02x%02x", b[1], b[0], b[3], b[2]))
-	debugf("%s", tag)
 	return tag
 }
 
@@ -190,9 +189,9 @@ func parseDataElement(bytes []byte, n int, explicit bool) {
 	// Data element
 	m := n
 	for n <= l && m+4 <= l {
+		undefinedLen := false
 		de := DataElement{N: n}
 		m += 4
-		printBytes(bytes[n:m])
 		t := bytes[n:m]
 		de.TagGroup = bytes[n : n+2]
 		de.TagElem = bytes[n+2 : n+4]
@@ -200,6 +199,7 @@ func parseDataElement(bytes []byte, n int, explicit bool) {
 		// TODO: Clean up tagString
 		tagStr := tagString(t)
 		log.Printf("n: %d, Tag: %X -> %s\n", n, t, tagStr)
+		printBytes(bytes[n:m])
 		n = m
 		if tagStr == "" {
 			log.Printf("%d Empty Tag: %s\n", n, tagStr)
@@ -208,7 +208,7 @@ func parseDataElement(bytes []byte, n int, explicit bool) {
 		} else {
 			log.Printf("Tag Name: %s\n", tag.Tag[tagStr]["name"])
 		}
-		var len int
+		var len uint32
 		var vr string
 		if explicit {
 			debugf("%d VR\n", n)
@@ -244,37 +244,59 @@ func parseDataElement(bytes []byte, n int, explicit bool) {
 				debugln("Lenght")
 				m += 4
 				printBytes(bytes[n:m])
-				len32 := binary.LittleEndian.Uint32(bytes[n:m])
-				len = int(len32)
+				len = binary.LittleEndian.Uint32(bytes[n:m])
 				n = m
 			} else {
 				debugln("Lenght")
 				m += 2
 				printBytes(bytes[n:m])
 				len16 := binary.LittleEndian.Uint16(bytes[n:m])
-				len = int(len16)
+				len = uint32(len16)
 				n = m
 			}
 		} else {
 			debugln("Lenght")
 			m += 4
 			printBytes(bytes[n:m])
-			len32 := binary.LittleEndian.Uint32(bytes[n:m])
-			len = int(len32)
+			len = binary.LittleEndian.Uint32(bytes[n:m])
 			n = m
 		}
-		de.Len = uint32(len)
+		if len == 0xFFFFFFFF {
+			undefinedLen = true
+			for {
+				// Find FFFEE0DD: SequenceDelimitationItem
+				endTag := bytes[m : m+4]
+				endTagStr := tagString(endTag)
+				if endTagStr == "FFFEE00D" || endTagStr == "FFFEE0DD" {
+					log.Printf("found SequenceDelimitationItem")
+					len = uint32(m - n)
+					m = n
+					break
+				} else {
+					m++
+					if m >= l {
+						fmt.Fprintf(os.Stderr, "ERROR: Couldn't find SequenceDelimitationItem\n")
+						printBytes(bytes[n:l])
+						return
+					}
+				}
+			}
+		}
+		de.Len = len
 		debugf("Lenght: %d\n", len)
+		m += int(len)
+		printBytes(bytes[n:m])
 		if vr == "SQ" {
-			n = parseSQDataElement(bytes, n, explicit)
-			m = n
+			de.Data = []byte{}
+			// n = parseSQDataElement(bytes[n:m], n, explicit)
 		} else {
-			m += len
-			printBytes(bytes[n:m])
 			de.Data = bytes[n:m]
 			fmt.Println(de.String())
-			n = m
 		}
+		if undefinedLen {
+			m += 8
+		}
+		n = m
 	}
 	log.Printf("parseDataElement Complete")
 }

@@ -74,7 +74,7 @@ func (de *DataElement) String() string {
 		padding = "    "
 	}
 	if de.Len < 128 {
-		return fmt.Sprintf("%s%04d (%s) %s %d %d %s %s", padding, de.N, de.TagStr, de.VRStr, de.VRLen, de.Len, tn, stringData(de.Data, de.VRStr))
+		return fmt.Sprintf("%s%04d (%s) %s %d %d %s %s", padding, de.N, de.TagStr, de.VRStr, de.VRLen, de.Len, tn, de.stringData())
 	}
 	return fmt.Sprintf("%s%04d (%s) %s %d %d %s %s", padding, de.N, de.TagStr, de.VRStr, de.VRLen, de.Len, tn, "...")
 }
@@ -145,45 +145,45 @@ func printBytes(b []byte) {
 	fmt.Printf("\n")
 }
 
-func stringData(bytes []byte, vr string) string {
-	if _, ok := vri.VR[vr]["fixed"]; ok && vri.VR[vr]["fixed"].(bool) {
+func (de *DataElement) stringData() string {
+	if _, ok := vri.VR[de.VRStr]["fixed"]; ok && vri.VR[de.VRStr]["fixed"].(bool) {
 		s := ""
-		l := len(bytes)
+		l := len(de.Data)
 		n := 0
-		vrl := vri.VR[vr]["len"].(int)
+		vrl := vri.VR[de.VRStr]["len"].(int)
 		switch vrl {
 		case 1:
 			for n+1 <= l {
-				s += fmt.Sprintf("%d ", bytes[n])
+				s += fmt.Sprintf("%d ", de.Data[n])
 				n++
 			}
 			return s
 		case 2:
 			for n+2 <= l {
-				e := binary.LittleEndian.Uint16(bytes[n : n+2])
+				e := binary.LittleEndian.Uint16(de.Data[n : n+2])
 				s += fmt.Sprintf("%d ", e)
 				n += 2
 			}
 			return s
 		case 4:
 			for n+4 <= l {
-				e := binary.LittleEndian.Uint32(bytes[n : n+4])
+				e := binary.LittleEndian.Uint32(de.Data[n : n+4])
 				s += fmt.Sprintf("%d ", e)
 				n += 4
 			}
 			return s
 		default:
-			return string(bytes)
+			return string(de.Data)
 		}
 	} else {
-		if _, ok := vri.VR[vr]["padded"]; ok && vri.VR[vr]["padded"].(bool) {
-			l := len(bytes)
-			if bytes[l-1] == 0x0 {
-				return string(bytes[:l-1])
+		if _, ok := vri.VR[de.VRStr]["padded"]; ok && vri.VR[de.VRStr]["padded"].(bool) {
+			l := len(de.Data)
+			if de.Data[l-1] == 0x0 {
+				return string(de.Data[:l-1])
 			}
-			return string(bytes)
+			return string(de.Data)
 		}
-		return string(bytes)
+		return string(de.Data)
 	}
 }
 

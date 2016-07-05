@@ -3069,11 +3069,11 @@ var Tag = map[string]map[string]string{
 	"FFFEE0DD": {"name": "SequenceDelimitationItem"},
 }
 
-// RangeTag -
+// TagRange -
 // http://dicom.nema.org/medical/dicom/current/output/html/part06.html#chapter_6
 // Table 6-1. Registry of DICOM Data Elements
 // http://www.sno.phy.queensu.ca/~phil/exiftool/TagNames/DICOM.html
-var RangeTag = map[string]map[string]string{
+var TagRange = map[string]map[string]string{
 	"002031XX": {"name": "SourceImageIDs"},
 	"002804X2": {"name": "CoefficientCoding"},
 	"002804X3": {"name": "CoefficientCodingPointers"},

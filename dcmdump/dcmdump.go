@@ -69,10 +69,14 @@ func (de *DataElement) String() string {
 	if _, ok := tag.Tag[de.TagStr]; !ok {
 		tn = "MISSING"
 	}
-	if de.Len < 128 {
-		return fmt.Sprintf("%04d (%s) %s %d %d %s %s", de.N, de.TagStr, de.VRStr, de.VRLen, de.Len, tn, stringData(de.Data, de.VRStr))
+	padding := ""
+	if de.PartOfSQ {
+		padding = "    "
 	}
-	return fmt.Sprintf("%04d (%s) %s %d %d %s %s", de.N, de.TagStr, de.VRStr, de.VRLen, de.Len, tn, "...")
+	if de.Len < 128 {
+		return fmt.Sprintf("%s%04d (%s) %s %d %d %s %s", padding, de.N, de.TagStr, de.VRStr, de.VRLen, de.Len, tn, stringData(de.Data, de.VRStr))
+	}
+	return fmt.Sprintf("%s%04d (%s) %s %d %d %s %s", padding, de.N, de.TagStr, de.VRStr, de.VRLen, de.Len, tn, "...")
 }
 
 type fh os.File
@@ -286,9 +290,10 @@ func parseDataElement(bytes []byte, n int, explicit bool) {
 		debugf("Lenght: %d\n", len)
 		m += int(len)
 		printBytes(bytes[n:m])
-		if vr == "SQ" {
+		if vr == "SQ" || vr == "OW" {
 			de.Data = []byte{}
-			// n = parseSQDataElement(bytes[n:m], n, explicit)
+			log.Printf("parseDataElement SQ")
+			parseDataElement(bytes[n:m], n, explicit)
 		} else {
 			de.Data = bytes[n:m]
 			fmt.Println(de.String())
@@ -301,74 +306,46 @@ func parseDataElement(bytes []byte, n int, explicit bool) {
 	log.Printf("parseDataElement Complete")
 }
 
-func parseSQDataElement(bytes []byte, n int, explicit bool) int {
-	log.Printf("parseSQDataElement")
-	// SQ Data element
-	sequenceDelimitationItem := false
-	for !sequenceDelimitationItem {
+func parseSQDataElements(bytes []byte, n int, explicit bool) int {
+	log.Printf("parseSQDataElements")
+	l := len(bytes)
+	m := n
+	for n <= l && m+4 <= l {
+		de := DataElement{N: n}
 		m := n + 4
 		printBytes(bytes[n:m])
 		t := bytes[n:m]
 		tagStr := tagString(t)
+		de.TagGroup = bytes[n : n+2]
+		de.TagElem = bytes[n+2 : n+4]
+		de.TagStr = tagString(t)
 		log.Printf("n: %d, Tag: %X -> %s\n", n, t, tagStr)
 		if _, ok := tag.Tag[tagStr]; !ok {
 			fmt.Fprintf(os.Stderr, "ERROR: %d Missing tag '%s'\n", n, tagStr)
-			return n
 		}
-		if tag.Tag[tagStr]["name"] == "SequenceDelimitationItem" {
-			sequenceDelimitationItem = true
-		}
-		n = m
-		log.Printf("Tag Name: %s\n", tag.Tag[tagStr]["name"])
-		var len int
-		debugln("Lenght")
-		m += 4
-		printBytes(bytes[n:m])
-		len32 := binary.LittleEndian.Uint32(bytes[n:m])
-		len = int(len32)
-		n = m
-		if len == 4294967295 {
-			debugln("Lenght undefined")
-			for {
-				// Find FFFEE00D: ItemDelimitationItem
-				endTag := bytes[n : n+4]
-				endTagStr := tagString(endTag)
-				if endTagStr == "FFFEE00D" {
-					m += 4
-					printBytes(bytes[n:m])
-					log.Printf("Tag: %X -> %s\n", endTag, endTagStr)
-					n = m
-					debugln("Item Delim found")
-					m += 4
-					printBytes(bytes[n:m])
-					n = m
-					break
-				} else {
-					m++
-					n = m
-				}
-			}
-		} else {
-			debugf("Lenght: %d\n", len)
-			debugln("Data")
-			m += len
-			printBytes(bytes[n:m])
-			if len < 128 {
-				if _, ok := tag.Tag[tagStr]; !ok {
-					// TODO: Handle implicit VR
-					fmt.Printf("    (%s) %s %s\n", tagStr, "MISSING", stringData(bytes[n:m], "SQ"))
-				} else {
-					fmt.Printf("    (%s) %s %s\n", tagStr, tag.Tag[tagStr]["name"], stringData(bytes[n:m], "SQ"))
-				}
+		// if _, ok := tag.Tag[tagStr]; ok && tag.Tag[tagStr]["name"] == "ItemDelimitationItem" {
+		// 	sequenceDelimitationItem = true
+		// }
+		for m <= l {
+			// Find FFFEE00D: ItemDelimitationItem
+			endTag := bytes[m : m+4]
+			endTagStr := tagString(endTag)
+			if endTagStr == "FFFEE00D" {
+				debugln("Item Delim found")
+				de.Data = bytes[n:m]
+				printBytes(bytes[n:m])
+				log.Printf("Tag: %X -> %s\n", endTag, endTagStr)
+				m += 4
+				n = m
+				// m += 4
+				// printBytes(bytes[n:m])
+				// n = m
+				break
 			} else {
-				if _, ok := tag.Tag[tagStr]; !ok {
-					fmt.Printf("    (%s) %s %s\n", tagStr, "MISSING", "...")
-				} else {
-					fmt.Printf("    (%s) %s %s\n", tagStr, tag.Tag[tagStr]["name"], "...")
-				}
+				m++
 			}
-			n = m
 		}
+		fmt.Println(de.String())
 	}
 	log.Printf("parseSQDataElement Complete")
 	return n

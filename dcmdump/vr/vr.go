@@ -106,7 +106,7 @@ var VR = map[string]map[string]interface{}{
 	"SQ": {
 		"name":  "Sequence of Items",
 		"len":   4,
-		"fixed": true,
+		"fixed": false,
 	},
 	"SS": {
 		"name":  "Signed Short",

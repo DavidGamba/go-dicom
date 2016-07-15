@@ -300,6 +300,7 @@ func parseDataElement(bytes []byte, n int, explicit bool) {
 		printBytes(bytes[n:m])
 		if vr == "SQ" || vr == "OW" {
 			de.Data = []byte{}
+			fmt.Println(de.String())
 			log.Printf("parseDataElement SQ")
 			parseDataElement(bytes[n:m], n, explicit)
 		} else {

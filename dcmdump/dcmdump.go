@@ -280,7 +280,7 @@ func parseDataElement(bytes []byte, n int, explicit bool) {
 				endTag := bytes[m : m+4]
 				endTagStr := tagString(endTag)
 				if endTagStr == "FFFEE00D" || endTagStr == "FFFEE0DD" {
-					log.Printf("found SequenceDelimitationItem")
+					log.Printf("found SequenceDelimitationItem at %d", m)
 					len = uint32(m - n)
 					m = n
 					break
@@ -298,7 +298,7 @@ func parseDataElement(bytes []byte, n int, explicit bool) {
 		debugf("Lenght: %d\n", len)
 		m += int(len)
 		printBytes(bytes[n:m])
-		if vr == "SQ" || vr == "OW" {
+		if vr == "SQ" {
 			de.Data = []byte{}
 			fmt.Println(de.String())
 			log.Printf("parseDataElement SQ")

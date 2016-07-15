@@ -569,6 +569,18 @@ func main() {
 			fmt.Fprintf(os.Stderr, "[ERROR] printStudySOPList: %s\n", err)
 			os.Exit(1)
 		}
+	case "study-level-get":
+		if len(remaining) < 2 {
+			fmt.Printf("[ERROR] Missing query!\n")
+			synopsis()
+			os.Exit(1)
+		}
+		query := remaining[1:]
+		err := printStudySOPList(lib, pacs, bind, dir, 2, true, tag.PatientLevel{}, query...)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "[ERROR] printStudySOPList: %s\n", err)
+			os.Exit(1)
+		}
 	case "get-all":
 		pl, err := patientLevelFind(lib, pacs, bind, dir, "PatientName=*")
 		if err != nil {

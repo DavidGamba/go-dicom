@@ -198,12 +198,12 @@ func (de *DataElement) stringData() string {
 	}
 }
 
-func parseDataElement(bytes []byte, n int, explicit bool) {
-	log.Printf("parseDataElement")
+func parseDataElement(bytes []byte, n int, explicit bool, limit int) {
 	l := len(bytes)
+	log.Printf("parseDataElement of size: %d, start possition: %d, limit %d", l, n, limit)
 	// Data element
 	m := n
-	for n <= l && m+4 <= l {
+	for n <= l && m+4 <= l && n <= limit && m+4 <= limit {
 		undefinedLen := false
 		de := DataElement{N: n}
 		m += 4
@@ -239,7 +239,7 @@ func parseDataElement(bytes []byte, n int, explicit bool) {
 					de.VRStr = "00"
 				} else {
 					fmt.Fprintf(os.Stderr, "ERROR: %d Missing VR '%s'\n", n, vr)
-					printBytes(bytes[n:])
+					printBytes(bytes[n:limit])
 					return
 				}
 			}
@@ -281,10 +281,17 @@ func parseDataElement(bytes []byte, n int, explicit bool) {
 		if len == 0xFFFFFFFF {
 			undefinedLen = true
 			for {
-				// Find FFFEE0DD: SequenceDelimitationItem
 				endTag := bytes[m : m+4]
 				endTagStr := tagString(endTag)
-				if endTagStr == "FFFEE0DD" {
+				if de.TagStr == "FFFEE000" && endTagStr == "FFFEE00D" {
+					// FFFEE000 item
+					// find FFFEE00D: ItemDelimitationItem
+					log.Printf("found ItemDelimitationItem at %d", m)
+					len = uint32(m - n)
+					m = n
+					break
+				} else if endTagStr == "FFFEE0DD" {
+					// Find FFFEE0DD: SequenceDelimitationItem
 					log.Printf("found SequenceDelimitationItem at %d", m)
 					len = uint32(m - n)
 					m = n
@@ -303,21 +310,26 @@ func parseDataElement(bytes []byte, n int, explicit bool) {
 		debugf("Lenght: %d\n", len)
 		m += int(len)
 		printBytes(bytes[n:m])
-		if vr == "SQ" {
+		if de.TagStr == "FFFEE000" {
 			de.Data = []byte{}
 			fmt.Println(de.String())
-			log.Printf("parseDataElement SQ")
-			if undefinedLen {
-				m += 8
-			}
-			parseDataElement(bytes[n:m], n, explicit)
+			log.Printf("parseDataElement Item %d %d", n, m)
+			printBytes(bytes[n:m])
+			parseDataElement(bytes, n, true, m)
+			log.Printf("parseDataElement Item Complete")
+		} else if vr == "SQ" {
+			de.Data = []byte{}
+			fmt.Println(de.String())
+			log.Printf("parseDataElement SQ %d %d", n, m)
+			printBytes(bytes[n:m])
+			parseDataElement(bytes, n, false, m)
 			log.Printf("parseDataElement SQ Complete")
 		} else {
 			de.Data = bytes[n:m]
 			fmt.Println(de.String())
-			if undefinedLen {
-				m += 8
-			}
+		}
+		if undefinedLen {
+			m += 8
 		}
 		n = m
 	}
@@ -415,5 +427,5 @@ func main() {
 
 	explicit := true
 
-	parseDataElement(bytes, n, explicit)
+	parseDataElement(bytes, n, explicit, len(bytes))
 }

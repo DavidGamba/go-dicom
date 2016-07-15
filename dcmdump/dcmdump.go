@@ -148,8 +148,13 @@ func printBytes(b []byte) {
 
 func (de *DataElement) stringData() string {
 	if de.TagStr == "00020010" {
-		if tsStr, ok := ts.TS[string(de.Data)]; ok {
-			return string(de.Data) + " " + tsStr["name"].(string)
+		dataStr := string(de.Data)
+		l := len(de.Data)
+		if de.Data[l-1] == 0x0 {
+			dataStr = string(de.Data[:l-1])
+		}
+		if tsStr, ok := ts.TS[dataStr]; ok {
+			return dataStr + " " + tsStr["name"].(string)
 		}
 	}
 	if _, ok := vri.VR[de.VRStr]["fixed"]; ok && vri.VR[de.VRStr]["fixed"].(bool) {

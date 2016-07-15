@@ -214,7 +214,7 @@ func parseDataElement(bytes []byte, n int, explicit bool) {
 		if tagStr == "" {
 			log.Printf("%d Empty Tag: %s\n", n, tagStr)
 		} else if _, ok := tag.Tag[tagStr]; !ok {
-			fmt.Fprintf(os.Stderr, "ERROR: %d Missing tag '%s'\n", n, tagStr)
+			fmt.Fprintf(os.Stderr, "INFO: %d Missing tag '%s'\n", n, tagStr)
 		} else {
 			log.Printf("Tag Name: %s\n", tag.Tag[tagStr]["name"])
 		}
@@ -228,13 +228,15 @@ func parseDataElement(bytes []byte, n int, explicit bool) {
 			de.VRStr = string(bytes[n:m])
 			vr = string(bytes[n:m])
 			if _, ok := vri.VR[vr]; !ok {
-				// if bytes[n] == 0x0 && bytes[n+1] == 0x0 {
-				// 	fmt.Fprintf(os.Stderr, "ERROR: Blank VR\n")
-				// } else {
-				fmt.Fprintf(os.Stderr, "ERROR: %d Missing VR '%s'\n", n, vr)
-				printBytes(bytes[n:])
-				return
-				// }
+				if bytes[n] == 0x0 && bytes[n+1] == 0x0 {
+					fmt.Fprintf(os.Stderr, "INFO: Blank VR\n")
+					vr = "00"
+					de.VRStr = "00"
+				} else {
+					fmt.Fprintf(os.Stderr, "ERROR: %d Missing VR '%s'\n", n, vr)
+					printBytes(bytes[n:])
+					return
+				}
 			}
 			n = m
 			if vr == "OB" ||

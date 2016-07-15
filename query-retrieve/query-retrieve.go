@@ -6,7 +6,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/davidgamba/go-dicom/tag"
+	"github.com/davidgamba/go-dicom/qr/tag"
 	"github.com/davidgamba/go-getoptions" // as getoptions
 	"gopkg.in/xmlpath.v2"
 	"os"

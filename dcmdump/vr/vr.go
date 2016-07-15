@@ -139,7 +139,11 @@ var VR = map[string]map[string]interface{}{
 		"len":   4,
 		"fixed": true,
 	},
-	// UN
+	"UN": {
+		"name":  "Unknown",
+		"len":   0,
+		"fixed": false,
+	},
 	"UR": {
 		"name":  "Universal Resource Identifier or Universal Resource Locator (URI/URL)",
 		"len":   2 ^ 32 - 2,
@@ -150,5 +154,9 @@ var VR = map[string]map[string]interface{}{
 		"len":   2,
 		"fixed": true,
 	},
-	// UT
+	"UT": {
+		"name":  "Unlimited Text",
+		"len":   2 ^ 32 - 2, // maximum
+		"fixed": false,
+	},
 }
